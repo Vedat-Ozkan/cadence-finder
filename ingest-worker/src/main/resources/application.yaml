@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: ingest-worker
+  cloud:
+    aws:
+      region:
+        static: ${AWS_REGION:us-east-1}
+      sqs:
+        listener:
+          queue-not-found-strategy: fail
+
+cadence:
+  bucket: ${CADENCE_BUCKET}
+  table: ${CADENCE_TABLE}
+  queue: ${CADENCE_QUEUE}

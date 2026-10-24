@@ -61,6 +61,7 @@ cadence-finder/
   PLAN.md  README.md  NOTICE (DCML attribution)  .gitignore (.env, *.tfstate*, corpus/)
   settings.gradle.kts
   corpus-core/        Java lib: TSV parser, tokeniser, passage windows, query grammar
+  cadence-store/      Java lib: DynamoDB item layout shared by worker and API (write, read META, GSI candidates)
   ingest-worker/      Spring Boot: SQS -> DynamoDB + S3 + embedder
   search-api/         Spring Boot: /search, /similar, /nl-search, /reindex, (wk3) /ask
   embedder/           FastAPI: /passages (upsert), /search
@@ -121,7 +122,7 @@ Example of the headline query: `Ger ... @PAC?corpus=bps`. It uses a cadence-only
   1. Fetch the TSV.
   2. Parse it with `corpus-core`.
   3. BatchWriteItem the META, occurrence and cadence items. Keys are deterministic, so re-running overwrites (idempotent).
-  4. Write the passage texts to `s3://…/passages/<id>/<n>.txt`.
+  4. Write the passage texts to `s3://…/passages/<corpus>/<stem>.jsonl`, one JSON object per line. One object per movement instead of one per passage avoids ~15k small PUTs.
   5. From weekend 2: POST the passages to `embedder /passages`.
 - A malformed TSV throws an exception, the message is retried 3 times (`maxReceiveCount=3`), and then goes to `ingest-<env>-dlq`.
 
@@ -192,7 +193,13 @@ Each **⛔** step needs your explicit OK before it runs. These steps publish, cr
 1. `corpus-core`: the parser, both token levels, n-grams, windows and the query grammar. Run it on all 188 TSVs and print stats: chords per movement, how many cadences of each type per corpus, and every token value seen. **Done 2026-10-23.** Results: all 188 files parse; cadence counts after tokenising match the raw data exactly; the query grammar accepts every token in the corpus; `Ger ... @PAC` finds 25 matches in `bps`. Rows inside alternative endings that have no `duration_qb` (341 of 65,324) are treated as lasting 0, so their bar range ends in the bar where they start. Gradle 9 needs Java 17+ to run, so run it with `JAVA_HOME=~/.local/share/jdks/jdk-25.0.5+8`.
 2. Golden set: write `e2e/golden.yaml` with 10 progressions, each with expected movement and bar ranges, checked by hand against the TSVs. Example: op18-1 mvt 1 `I V I IV6` at bars 1–5 (IV6 lasts two bars). Include the headline `Ger ... @PAC` (one known hit is `bps` 01-1, bars 140–142, arriving on `i`), one It/Fr query, and one cadence query on `abc` that must return 400. Each entry asserts that its expected hit is **included** in the results, not that the result set matches exactly; for example, `I V I IV6` occurs in op18-1 mvt 1 at both bars 1–5 and bars 9–13. **Done 2026-10-23:** `e2e/golden.yaml` has 17 entries, each checked against the raw TSV rows. Besides `includes`, an entry can assert `excludes` (a match that must not appear) and an exact `count` (25 for the headline and 0 for the empty query, both confirmed independently with awk). The entries cover every tokeniser rule: merging repeated chords, cadences on rows without a chord, `@none` breaks, alternative endings, applied augmented sixths, and minor keys. 16 pass against `CorpusCli`; the abc-cadence 400 waits for search-api. Note: DCML writes the cadential six-four as `V(64)`, so it tokenises as `V`, and a query `I64 V` will not find it.
 3. Terraform `dev`: S3, SQS + DLQ, DynamoDB. ⛔ `terraform apply`. **Done 2026-10-23:** 9 resources in us-east-1: bucket `cadence-finder-dev-961136197755`, queues `ingest-dev` and `ingest-dev-dlq`, table `cadence-dev` with `gsi1`, and IAM user `cadence-finder-dev-app`. A test upload produced an `ObjectCreated:Put` message on the queue. S3 also sends a one-off `s3:TestEvent` message when a notification is configured; **the worker must skip it** rather than fail, or it ends up in the DLQ. The DynamoDB index uses `key_schema` blocks because provider 6.70 deprecates `hash_key`/`range_key` inside a GSI.
-4. ingest-worker and search-api `/search`.
+4. ingest-worker and search-api `/search`. **Done 2026-10-23.** Spring Boot 4.1.2 with Spring Cloud AWS 4.2.0. Its compatibility table lists Boot 4.0.x, but it worked at runtime on 4.1.2. Run locally against real `dev` AWS:
+   - 188 movements were ingested in 3 min 5 s, with no errors, an empty DLQ and 188 passage files.
+   - All 17 golden queries pass against `/search`, including the 400s. The 261-hit query exercises the cursor.
+   - Each app has `software.amazon.awssdk:signin` on the runtime classpath so the SDK can use `aws login` sessions locally.
+   - The worker sets `queue-not-found-strategy: fail`, so it never creates queues.
+   - The cursor is the last movement id returned; `limit` is 1–200.
+   - Re-ingesting overwrites items but does not delete n-gram items that no longer exist; clear the table if the tokeniser changes.
 5. `e2e/compose.yaml` runs LocalStack, both services and an init script that creates the same resources. The e2e test uploads the corpus, waits until the queue is empty, and checks all 10 golden queries. It also uploads a malformed TSV and asserts it reaches the DLQ.
 6. Kind overlay. Build images locally and load them with `kind load`. Run the same flow against the real `dev` AWS from kind.
 7. CI (`ci.yml`): Gradle build, then e2e on compose and LocalStack. `images.yml` builds multi-arch images; ⛔ pushing them to GHCR.

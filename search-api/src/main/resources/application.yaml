@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: search-api
+  cloud:
+    aws:
+      region:
+        static: ${AWS_REGION:us-east-1}
+
+cadence:
+  table: ${CADENCE_TABLE}
