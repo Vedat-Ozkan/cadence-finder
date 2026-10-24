@@ -187,3 +187,15 @@ def test_malformed_file_lands_in_dead_letter_queue(ingested, s3):
         wait_for(in_dlq, DLQ_TIMEOUT, f"{key} to reach the dead-letter queue")
     finally:
         s3.delete_object(Bucket=BUCKET, Key=key)
+
+
+@pytest.mark.skipif(not RUN_NL, reason="calls the Claude API; set RUN_NL=1")
+def test_ask_cites_retrieved_passages(ingested):
+    status, body = post("/ask", {"question": "Where does Beethoven use a German sixth to approach a perfect authentic cadence in his piano sonatas?"})
+    assert status == 200, body
+    assert body["citations"], body
+    passages = {passage["passageId"]: passage for passage in body["passages"]}
+    for citation in body["citations"]:
+        passage = passages.get(citation["passageId"])
+        assert passage, citation
+        assert passage["firstBar"] <= citation["firstBar"] <= citation["lastBar"] <= passage["lastBar"], (citation, passage)
