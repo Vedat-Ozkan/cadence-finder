@@ -9,3 +9,8 @@ locals {
   env  = terraform.workspace
   name = "cadence-finder-${local.env}"
 }
+
+variable "k3s_version" {
+  type    = string
+  default = "v1.36.5+k3s1"
+}

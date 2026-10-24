@@ -17,3 +17,11 @@ output "table" {
 output "app_user" {
   value = local.env == "dev" ? aws_iam_user.app[0].name : null
 }
+
+output "node_instance_id" {
+  value = local.env == "live" ? aws_instance.node[0].id : null
+}
+
+output "node_public_ip" {
+  value = local.env == "live" ? aws_eip.node[0].public_ip : null
+}

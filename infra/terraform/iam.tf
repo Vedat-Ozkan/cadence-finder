@@ -1,13 +1,5 @@
-resource "aws_iam_user" "app" {
-  count = local.env == "dev" ? 1 : 0
-  name  = "${local.name}-app"
-}
-
-resource "aws_iam_user_policy" "app" {
-  count = local.env == "dev" ? 1 : 0
-  name  = "${local.name}-app"
-  user  = aws_iam_user.app[0].name
-  policy = jsonencode({
+locals {
+  app_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
@@ -45,4 +37,16 @@ resource "aws_iam_user_policy" "app" {
       },
     ]
   })
+}
+
+resource "aws_iam_user" "app" {
+  count = local.env == "dev" ? 1 : 0
+  name  = "${local.name}-app"
+}
+
+resource "aws_iam_user_policy" "app" {
+  count  = local.env == "dev" ? 1 : 0
+  name   = "${local.name}-app"
+  user   = aws_iam_user.app[0].name
+  policy = local.app_policy
 }

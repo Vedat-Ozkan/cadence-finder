@@ -216,7 +216,7 @@ Each **⛔** step needs your explicit OK before it runs. These steps publish, cr
 8. **Done when:** the whole corpus is ingested on kind against real AWS, `curl` passes all 10 golden queries, a poison message lands in the DLQ, and CI is green. **Weekend 1 done 2026-10-24.** Open items: (a) the worker's memory headroom is about 44 MiB at 512Mi; (b) pushing images to GHCR is still waiting for approval.
 
 ### Weekend 2: similarity, NL search, deploy, observe
-1. Embedder plus pgvector. The worker calls `/passages`; search-api gets `/similar`. Add the embedder and pgvector to compose. The e2e test calls the real Voyage API with a GitHub secret (cents per run). **Built 2026-10-24, full e2e blocked:** the Voyage key has no payment method on file, which limits it to 3 requests and 10K tokens a minute (Voyage's own 429 message says so). Embedding the corpus takes about 1.5M tokens. Done so far:
+1. Embedder plus pgvector. The worker calls `/passages`; search-api gets `/similar`. Add the embedder and pgvector to compose. The e2e test calls the real Voyage API with a GitHub secret (cents per run). **Done 2026-10-24.** The first full run was blocked because the Voyage key had no payment method (3 requests and 10K tokens a minute). After you added one: 21 e2e tests pass in about 4.7 min, with 188 embedder calls returning 204 and 14,788 passages in pgvector.
    - `embedder/` (FastAPI, asyncpg, pgvector 0.8 HNSW with `hnsw.iterative_scan`). `/similar` excludes passage windows that overlap the source passage in the same movement. Optional `rerank-3`. Voyage 429s are retried with backoff (1, 2, 4 s).
    - The worker now embeds **before** writing to DynamoDB, so a Voyage failure does not trigger a costly DynamoDB rewrite on the SQS retry.
    - compose and CI use `voyage-4-lite` (same 1024 dimensions; $0.02/M); `dev` and `live` use `voyage-4-large`.
@@ -229,7 +229,7 @@ Each **⛔** step needs your explicit OK before it runs. These steps publish, cr
    - One prompt fix from testing: a figure always means that exact inversion (`7` is root position); omit the figure to match any inversion.
    - CI runs these tests only through `workflow_dispatch` with `natural_language: true`.
    - Errors use RFC 9457 problem details (`spring.mvc.problemdetails.enabled`).
-3. ⛔ Terraform `live` and the EC2/k3s instance. Deploy the k3s overlay and ingest the corpus. You get a live HTTPS URL.
+3. ⛔ Terraform `live` and the EC2/k3s instance. **Written 2026-10-24, waiting for apply approval.** `terraform plan` creates 14 resources: the `live` bucket, queues and table; a t4g.medium on Ubuntu 24.04 arm64 that installs k3s v1.36.5 through user-data; IMDSv2 with hop limit 2; an encrypted 20 GB gp3 disk; an EIP; and a security group with only 80 and 443 open. **Access is through SSM Session Manager**, which replaces SSH on port 22: the node role has the app policy plus `AmazonSSMManagedInstanceCore`, and the app IAM policy is shared between the dev user and the live role. Deploy the k3s overlay and ingest the corpus. You get a live HTTPS URL.
 4. Install the OTel agent and instrumentation, the ADOT collector, the dashboard and two alarms. ⛔ The SNS email subscription.
 5. Check that `POST /reindex/{id}` produces **one X-Ray trace** across search-api, SQS, the worker and the embedder. Add the manual `traceparent` fallback if it doesn't.
 6. `docs/runbook.md`: the DLQ alarm (inspect, fix, redrive), the p99 alarm, pod crash loop, pgvector disk full, stopping and starting the instance.
