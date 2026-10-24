@@ -18,7 +18,8 @@ Search for chord progressions and cadences in three annotated corpora by Beethov
 - **`search-api` (Spring Boot):**
   - answers `/search` from the DynamoDB index plus a matcher;
   - answers `/passages/{id}/similar` from pgvector, with optional rerank;
-  - answers `/nl-search` by having Claude write the structured query, which goes through the same validator.
+  - answers `/nl-search` by having Claude write the structured query, which goes through the same validator;
+  - answers `/ask` from up to 8 retrieved passages, with citations checked against them.
 - **Hosting:** everything runs on one k3s node on EC2, built with Terraform, with Traefik and Let's Encrypt.
 - **Tracing:** an ADOT collector sends traces to X-Ray, metrics as EMF, and logs to CloudWatch.
 - **Scale to zero:** the node stops itself after 30 idle minutes, and a Lambda function URL wakes it.
@@ -34,6 +35,8 @@ Search for chord progressions and cadences in three annotated corpora by Beethov
 | Cold start from stopped | ~85 s to first result |
 | Retrieval, self-labelled hit rate@5 | `/nl-search` 1.00; text search 0.62–0.69, rerank 0.69–1.00 |
 | One trace across the API, SQS, worker and embedder | yes, a single X-Ray trace |
+| `/ask` (RAG with validated citations) | 8/8 grounded; 8/8 prompt-injection cases pass; p50 9 s |
+| Game day | stalled worker detected in 6.5 min, bad file in 9 min, Postgres kill self-healed with no failed requests |
 
 ## Layout
 

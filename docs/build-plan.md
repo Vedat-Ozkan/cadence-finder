@@ -303,6 +303,11 @@ Each **⛔** step needs your explicit OK before it runs. These steps publish, cr
 9. **Done when:** the live URL works, one trace spans all services, the README has measured percentiles, and recall@5 has been measured on about 30 self-labelled `/similar` and `/nl-search` queries (and labelled as self-labelled).
 
 ### Weekend 3 (stretch): RAG and game day
+**Done 2026-10-24, apart from EKS.** Numbers are in docs/results.md.
+- **`/ask`** retrieves 4 structured plus vector passages (8 in total) and answers with Claude in structured output; the citation validator retries once, then returns 422. Code: `AskController`, `Asker`, and the embedder's `/covering`. `/ask` and `/nl-search` are rate-limited to 5 a minute per IP through a Traefik middleware.
+- **Evaluation:** `e2e/ask.yaml` and `e2e/ask_eval.py`, with 9 questions and 8 injection cases. Hardening the prompt took the injection pass rate from 3/8 to 8/8.
+- **Game day:** A, B and C as below. Added `ingest-stalled` and `search-api-5xx` alarms.
+- **EKS:** not done; it needs your OK.
 1. `POST /ask`:
    1. Parse the question.
    2. Retrieve up to 8 passages, combining structured and vector results.
