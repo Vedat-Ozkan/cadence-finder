@@ -1,0 +1,53 @@
+labels: >-
+  Held-out cases, written before the passage text was changed and never tuned against it. Same format and
+  labelling rules as recall.yaml, covering chords and cadences the original cases do not.
+metric:
+  relevant: >-
+    A returned passage or hit is relevant when it is in the same movement as a truth hit and its bar range
+    covers the truth hit's bars (firstBar <= truth.firstBar and lastBar >= truth.lastBar).
+  hitRate: >-
+    text and similar runs - fraction of cases with at least one relevant result in the top 5 (often called
+    recall@5; true recall would be tiny when a truth query has dozens of hits). nl run - fraction of cases whose
+    interpreted query finds at least one truth hit.
+  precision: >-
+    text and similar runs - mean over cases of relevant results in the top 5 divided by 5. nl run - mean over
+    cases of the share of the interpreted query's hits that are relevant.
+  recall: nl run only - mean over cases of the share of truth hits found by the interpreted query.
+  runs: >-
+    text - embedder POST /search {text, k 5} with rerank off and on (rerank reorders the top 20 vector
+    candidates, so it cannot rescue a passage outside them). similar - search-api GET
+    /passages/{id}/similar?k=5 from a source passage that covers a truth hit, rerank off and on; windows
+    overlapping the source are excluded by the service. nl - search-api POST /nl-search on the text cases,
+    only with RUN_NL=1 because it calls Claude; /nl-search pages are in movement-id order, not ranked, so it is
+    scored on the full result set of the interpreted query.
+cases:
+  - name: applied dominant seventh of V to V
+    truth: {query: V7/V V}
+    text: a secondary dominant seventh of the dominant resolving to the dominant
+  - name: diminished seventh of V into a half cadence
+    truth: {query: viio7/V V@HC}
+    text: a diminished seventh chord leading to the dominant, which arrives as a half cadence
+  - name: half-diminished supertonic to V
+    truth: {query: ii%65 V}
+    text: a half-diminished supertonic seventh chord in first inversion moving to the dominant
+  - name: imperfect authentic cadence, Mozart
+    truth: {query: "@IAC", corpus: mps}
+    text: an imperfect authentic cadence in a Mozart piano sonata
+  - name: subdominant six-four back to the tonic
+    truth: {query: IV64 I}
+    text: a subdominant chord in six-four position returning to the tonic
+  - name: augmented triad applied to IV
+    truth: {query: V+6/IV IV}
+    text: an augmented triad acting as the dominant of the subdominant, resolving to the subdominant
+  - name: similar to an applied dominant of ii
+    truth: {query: V65/ii ii}
+    passage: "abc:n01op18-1_04#24"
+  - name: similar to a diminished seventh of vi
+    truth: {query: "#viio7/vi vi"}
+    passage: "abc:n01op18-1_01#80"
+  - name: similar to an applied dominant of IV in third inversion
+    truth: {query: V2/IV IV6}
+    passage: "bps:01-4#31"
+  - name: similar to a diminished supertonic to V
+    truth: {query: iio6 V}
+    passage: "mps:K279-2#14"

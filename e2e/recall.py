@@ -14,7 +14,7 @@ EMBEDDER = os.environ.get("EMBEDDER_URL", "http://localhost:8000")
 MODEL = os.environ.get("MODEL", "voyage-4-lite")
 RUN_NL = os.environ.get("RUN_NL") == "1"
 K = 5
-SPEC = yaml.safe_load((HERE / "recall.yaml").read_text())
+SPEC = yaml.safe_load(Path(os.environ.get("CASES", HERE / "recall.yaml")).read_text())
 RESULTS = HERE / "results" / "recall.json"
 
 
