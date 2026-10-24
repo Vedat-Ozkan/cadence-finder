@@ -161,3 +161,23 @@ What the game day changed:
 - **Detection on the DLQ path is slow by design.** Most of B's 9 minutes come from the retry policy, 3 receives × 120 s. A shorter visibility timeout would detect faster but would also retry slow Voyage calls more aggressively.
 - **Idle-stop ignores ingestion.** During A and B there was no API traffic for 30 minutes, so the node powered itself off mid-game-day. Messages in flight are not lost, because SQS redelivers them after the next wake. For maintenance, stop `idle-stop.timer` first, as the runbook says.
 - **Probe scripts need a time limit.** C's script waited for an alarm that, correctly, never fired, and kept the node up for an extra 3.5 hours (about $0.14).
+
+## EKS afternoon (2026-10-24, torn down the same day)
+
+- **Setup:** EKS 1.37 with a managed node group of 2× t4g.medium, in the default VPC's public subnets, with no NAT gateway and no load balancer.
+- **Add-ons and access:** Pod Identity for app and EBS CSI permissions, a gp3 StorageClass, and images pulled from ECR.
+- **Deploy:** the same base manifests through `deploy/k8s/overlays/eks`.
+- **Results:** the full e2e suite passed through a port-forward (23 passed). Ingestion took 147 s for 188 movements.
+- **Teardown:** `terraform apply -var eks=false` destroyed all 19 resources. The namespace was deleted first so the CSI driver removed the EBS volume.
+
+In-cluster `/search` load: k6 ran as a Job inside each cluster, after a warm-up, with the same queries as the live test. Single runs, so read them as indicative.
+
+| Rate | k3s, 1 node: p50 / p99 | EKS, 2 nodes: p50 / p99 |
+|---|---|---|
+| 80 RPS | 10 / 68 ms | 7 / 19 ms |
+| 160 RPS | 9 / 82 ms | 6 / 21 ms |
+| 240 RPS | 11 / 259 ms | 6 / 19 ms |
+| 320 RPS | 9 / 152 ms | collapsed (p99 3.9 s) |
+
+- **The live ceiling isn't search-api.** From the laptop over HTTPS, the k3s node saturates near 100–120 RPS, but from inside the cluster it serves 320 RPS. So the external limit is TLS termination in Traefik plus the network path.
+- **EKS's extra node gives a much tighter tail up to 240 RPS.**
