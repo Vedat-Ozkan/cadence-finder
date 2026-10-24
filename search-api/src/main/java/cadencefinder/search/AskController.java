@@ -84,7 +84,7 @@ public class AskController {
         if (page.results().isEmpty()) {
             return List.of();
         }
-        List<Span> spans = page.results().stream().map(hit -> new Span(hit.movementId(), hit.firstBar(), hit.lastBar())).toList();
+        List<Span> spans = page.results().stream().limit(STRUCTURED).map(hit -> new Span(hit.movementId(), hit.firstBar(), hit.lastBar())).toList();
         return embedder.post().uri("/covering").body(Map.of("spans", spans)).retrieve().body(SimilarResults.class).results();
     }
 

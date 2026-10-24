@@ -4,13 +4,13 @@ Live environment: one t4g.medium running k3s in us-east-1, namespace `cadence`.
 
 | Thing | Where |
 |---|---|
-| App | https://cadence-finder.duckdns.org (`/search`, `/passages/{id}/similar`, `/nl-search`) |
+| App | https://cadence-finder.duckdns.org (`/search`, `/passages/{id}/similar`, `/nl-search`, `/ask`; the last two are rate-limited to 5 a minute per IP) |
 | Public link that wakes the node | `terraform -chdir=infra/terraform output -raw wake_url` (workspace `live`) |
 | Dashboard | CloudWatch → Dashboards → `cadence-finder-live` |
 | Traces | CloudWatch → X-Ray traces → Trace map; filter `service("search-api")` |
 | App logs | Log group `/cadence-finder/live/app` (7 days) |
 | Metrics (EMF) | Namespace `CadenceFinder`, log group `/cadence-finder/live/metrics` |
-| Alarms | `cadence-finder-live-dlq-not-empty`, `cadence-finder-live-search-p99`, both to SNS topic `cadence-finder-live-alarms` |
+| Alarms | `cadence-finder-live-dlq-not-empty`, `-search-p99`, `-ingest-stalled`, `-search-api-5xx`, all to SNS topic `cadence-finder-live-alarms` |
 | Secrets | SSM Parameter Store `/cadence/live/*` (SecureString) |
 
 ## Getting a shell on the node
@@ -86,6 +86,29 @@ p99 of `GET /search` stayed over 0.5 s for two 5-minute periods.
    - `k describe pod -l app=search-api | grep -A5 'Last State'` shows recent OOM kills or restarts.
 4. **After a cold start,** the first minute of JIT warm-up can push p99 up. If the alarm fires right after a wake and clears, no action is needed.
 5. **If DynamoDB is the bottleneck,** it is on-demand, so look for throttling events in the table's CloudWatch metrics.
+
+<a id="ingest-stalled"></a>
+### Ingest stalled (`cadence-finder-live-ingest-stalled`)
+
+The oldest message in `ingest-live` is more than 3 minutes old: messages arrive but nothing consumes them.
+
+1. Run `k get deploy ingest-worker` and `k get pods -l app=ingest-worker`.
+   - If the worker is at 0 replicas or crash-looping, scale it back up or fix it. See "Pod crash loop" below.
+2. If the worker is running, look at `k logs deploy/ingest-worker --since=15m`:
+   - `queue-not-found` or credential errors point to config or IAM;
+   - long pauses point to slow Voyage or embedder calls. Check the embedder logs.
+3. The alarm clears once the backlog drains, at about 90 passages/s with one replica.
+
+<a id="search-api-5xx"></a>
+### search-api 5xx (`cadence-finder-live-search-api-5xx`)
+
+More than five 500 responses in a minute.
+
+1. In X-Ray, filter `service("search-api") AND http.status = 500` to see which route and downstream call fails.
+2. Usual causes:
+   - **`/passages/{id}/similar` and `/ask`:** the embedder or Postgres is down. Check `k get pods`. The StatefulSet restarts `postgres-0` by itself, and the embedder's pool reconnects.
+   - **`/nl-search` and `/ask`:** Claude API errors. Check status.anthropic.com and the `ANTHROPIC_API_KEY` secret.
+   - **`/search`:** DynamoDB errors or throttling. Check the dashboard.
 
 ## Pod crash loop
 
