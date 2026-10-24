@@ -36,6 +36,20 @@ resource "aws_iam_role_policy" "node_app" {
   policy = local.app_policy
 }
 
+resource "aws_iam_role_policy" "node_parameters" {
+  count = local.live
+  name  = "${local.name}-parameters"
+  role  = aws_iam_role.node[0].id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["ssm:GetParameter", "ssm:GetParametersByPath"]
+      Resource = "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter/cadence/${local.env}/*"
+    }]
+  })
+}
+
 resource "aws_iam_role_policy_attachment" "node_ssm" {
   count      = local.live
   role       = aws_iam_role.node[0].name
@@ -97,6 +111,7 @@ resource "aws_instance" "node" {
   user_data = <<-EOT
     #!/bin/bash
     set -euo pipefail
+    snap install aws-cli --classic
     curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="${var.k3s_version}" sh -s - --write-kubeconfig-mode 600
   EOT
 
