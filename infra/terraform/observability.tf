@@ -40,18 +40,42 @@ resource "aws_cloudwatch_metric_alarm" "dlq" {
 resource "aws_cloudwatch_metric_alarm" "search_p99" {
   count               = local.live
   alarm_name          = "${local.name}-search-p99"
-  alarm_description   = "p99 latency of GET /search above 500 ms. See docs/runbook.md#search-p99."
-  namespace           = "CadenceFinder"
-  metric_name         = "http.server.request.duration"
-  dimensions          = { "service.name" = "search-api", "http.route" = "/search" }
-  extended_statistic  = "p99"
-  period              = 300
+  alarm_description   = "p99 latency of GET /search above 500 ms over at least 50 requests. See docs/runbook.md#search-p99."
   evaluation_periods  = 2
   threshold           = 0.5
   comparison_operator = "GreaterThanThreshold"
   treat_missing_data  = "notBreaching"
   alarm_actions       = [aws_sns_topic.alarms[0].arn]
   ok_actions          = [aws_sns_topic.alarms[0].arn]
+
+  metric_query {
+    id          = "p99_with_traffic"
+    expression  = "IF(requests >= 50, p99, 0)"
+    label       = "p99 when at least 50 requests"
+    return_data = true
+  }
+
+  metric_query {
+    id = "p99"
+    metric {
+      namespace   = "CadenceFinder"
+      metric_name = "http.server.request.duration"
+      dimensions  = { "service.name" = "search-api", "http.route" = "/search" }
+      stat        = "p99"
+      period      = 300
+    }
+  }
+
+  metric_query {
+    id = "requests"
+    metric {
+      namespace   = "CadenceFinder"
+      metric_name = "http.server.request.duration"
+      dimensions  = { "service.name" = "search-api", "http.route" = "/search" }
+      stat        = "SampleCount"
+      period      = 300
+    }
+  }
 }
 
 resource "aws_cloudwatch_dashboard" "main" {

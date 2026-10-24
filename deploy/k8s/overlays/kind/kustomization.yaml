@@ -20,10 +20,15 @@ configMapGenerator:
       - CADENCE_BUCKET=cadence-finder-dev-961136197755
       - CADENCE_TABLE=cadence-dev
       - CADENCE_QUEUE=ingest-dev
+      - EMBEDDER_URL=http://embedder:8000
+      - VOYAGE_MODEL=voyage-4-lite
 images:
   - name: ghcr.io/vedat-ozkan/cadence-finder/ingest-worker
     newName: cadence/ingest-worker
     newTag: dev
   - name: ghcr.io/vedat-ozkan/cadence-finder/search-api
     newName: cadence/search-api
+    newTag: dev
+  - name: ghcr.io/vedat-ozkan/cadence-finder/embedder
+    newName: cadence/embedder
     newTag: dev

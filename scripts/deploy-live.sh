@@ -36,6 +36,8 @@ command_id="$(aws ssm send-command --instance-ids "$instance" --document-name AW
   --parameters "$(python3 -c 'import json, sys; print(json.dumps({"commands": [sys.argv[1]], "executionTimeout": ["900"]}))' "$script")" \
   --query Command.CommandId --output text)"
 echo "deploying $tag to $instance (command $command_id)"
-aws ssm wait command-executed --command-id "$command_id" --instance-id "$instance" || true
+while [ "$(aws ssm get-command-invocation --command-id "$command_id" --instance-id "$instance" --query Status --output text)" = InProgress ]; do
+  sleep 5
+done
 aws ssm get-command-invocation --command-id "$command_id" --instance-id "$instance" \
   --query '[Status, StandardOutputContent, StandardErrorContent]' --output text

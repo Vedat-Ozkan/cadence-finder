@@ -94,7 +94,7 @@ filters := ?corpus=bps|mps|abc&work=…&limit=50&cursor=…
 ```
 Example of the headline query: `Ger ... @PAC?corpus=bps`. It uses a cadence-only step because PAC arrivals are on `I` or `i` (Op. 2 No. 1 is in F minor and arrives on `i`). Each token is validated against the DCML numeral regex, so unknown chords return 400.
 
-**Passages for embeddings:** windows of 8 L1 tokens with stride 4, per movement. Text format: `Beethoven Op. 59 No. 1, mvt 2, F major (local: C major), bars 41–47: ii6 V65/V V I | perfect authentic cadence at bar 47`. Cadence names are spelled out in English so a general-purpose model can use them.
+**Passages for embeddings:** windows of 8 L1 tokens with stride 4, per movement. Text format, revised 2026-10-24 after measuring recall: the chords first, then an English gloss of the notable ones, then the cadences, then the header. For example: `i Ger6 V V7 i Ger6 V V7. German augmented sixth, dominant seventh. Perfect authentic cadence at bar 140; perfect authentic cadence at bar 142. Beethoven, Piano Sonata No. 1, mvt 1, F minor, bars 140-143.` The older format put the header first, and the title words dominated the embedding (see docs/results.md).
 
 ## DynamoDB (single table `cadence-<env>`)
 
@@ -254,15 +254,50 @@ Each **⛔** step needs your explicit OK before it runs. These steps publish, cr
        - the redirect comes after 80 s;
        - the first query then takes 0.8 s, so about 82 s from click to results in total.
      - Expected cost is about $1–2 a month: the visit time plus 30 min, plus the $0.80 disk.
-4. Install the OTel agent and instrumentation, the ADOT collector, the dashboard and two alarms. ⛔ The SNS email subscription.
-5. Check that `POST /reindex/{id}` produces **one X-Ray trace** across search-api, SQS, the worker and the embedder. Add the manual `traceparent` fallback if it doesn't.
-6. `docs/runbook.md`: the DLQ alarm (inspect, fix, redrive), the p99 alarm, pod crash loop, pgvector disk full, stopping and starting the instance.
+   - **Cold-start page:** the wake page shows a timer from the instance's launch time and a progress bar against about 90 s. It polls the Lambda for JSON every 3 s and opens the app when it's ready. Checked in Chrome from a stopped node: it redirected at about 1:25.
+4. Install the OTel agent and instrumentation, the ADOT collector, the dashboard and two alarms. ⛔ The SNS email subscription. **Done 2026-10-24, except the email subscription:**
+   - **Java:** the ADOT Java agent 2.32.0, fetched from Maven Central by sha256 (public ECR rate-limited the GitHub runners). It is enabled only in Kubernetes, through `JAVA_TOOL_OPTIONS`, so compose and CI run without it.
+   - **Python:** ADOT Python 0.21.0 through `opentelemetry-instrument` (FastAPI, httpx, asyncpg).
+   - **Collector:** ADOT collector v0.50.0 in the cluster, sending traces to X-Ray (`awsxray`), metrics to EMF (`awsemf`, namespace `CadenceFinder`) and logs to `/cadence-finder/<env>/app`.
+     - EMF keeps only `http.server.request.duration` with dimensions `service.name` and `http.route`, for API routes only.
+     - The agents export exponential histograms, so CloudWatch can compute percentiles. With explicit buckets EMF only had min, max, sum and count.
+   - **Memory after the agents:** limits are worker 640Mi, search-api 576Mi, embedder 256Mi and collector 192Mi. Measured use is worker about 336Mi, search-api about 300–375Mi, embedder about 85Mi and collector about 50Mi.
+   - **Dashboard `cadence-finder-live`:**
+     - `/search` p50, p95 and p99;
+     - requests by route;
+     - the ingest queue and DLQ;
+     - DynamoDB capacity;
+     - similar and nl p99;
+     - alarm status.
+   - **Alarms:**
+     - The DLQ alarm fires when the DLQ has more than 0 messages in a 5-minute window.
+     - The `/search` p99 alarm fires above 0.5 s for 2 × 5 min, counting only windows with at least 50 requests. Post-wake JIT warm-up gives about 2 s p99 on a handful of requests, which would otherwise alarm after every wake.
+     - Both notify SNS topic `cadence-finder-live-alarms`.
+   - **Waiting on you:**
+     - The email subscription is opt-in: set `alarm_email`, apply, and confirm the AWS email.
+     - The `dev` apply, which adds the log groups and permissions for kind, is planned but not applied.
+5. Check that `POST /reindex/{id}` produces **one X-Ray trace** across search-api, SQS, the worker and the embedder. Add the manual `traceparent` fallback if it doesn't. **Done 2026-10-24.**
+   - `POST /reindex/{movementId}` returns 404 for unknown movements; otherwise it returns 202 and sends `{movementId}`.
+   - The public ingress only routes `/search`, `/passages` and `/nl-search`, so `/reindex` and `/actuator` stay inside the cluster.
+   - Trace `1-6adcd155…` spans search-api, DynamoDB, SQS, the worker (S3 and DynamoDB), the embedder and Postgres. No `traceparent` fallback was needed.
+   - The e2e suite covers 202 with the passages file rewritten, and 404.
+6. `docs/runbook.md`: the DLQ alarm (inspect, fix, redrive), the p99 alarm, pod crash loop, pgvector disk full, stopping and starting the instance. **Done 2026-10-24.**
 7. k6:
    - **CI smoke** at low RPS against compose. This only checks pass or fail; it gives no figures.
    - **CV figures:** k6 from the laptop against `live` at increasing RPS on `/search`. Report client-side and server-side (EMF) p50, p95 and p99, the maximum RPS before p99 goes over 200 ms, and ingestion passages per second.
    - Report `/nl-search` latency separately, because the LLM dominates it.
    - Write to `docs/results.md` and the README.
-8. **Done when:** the live URL works, one trace spans all services, the README has measured percentiles, and recall@5 has been measured on about 30 self-labelled `/similar` and `/nl-search` queries (and labelled as self-labelled).
+   - **Done 2026-10-24:**
+     - `loadtest/smoke.js` runs in CI after the e2e tests: 3 VUs for 30 s, k6 2.3.0.
+     - `loadtest/ramp.js` measured about 80 RPS at p99 216 ms; the node saturates at 120 RPS.
+     - `/nl-search` p50 is 1.6 s and p99 3.6 s.
+     - Ingestion runs at about 90 passages/s.
+     - All figures are in docs/results.md and the README.
+8. recall@5 on self-labelled queries. **Done 2026-10-24:**
+   - `e2e/recall.py` with 30 cases (`recall.yaml`) and 10 held-out cases (`recall-holdout.yaml`).
+   - Live, with voyage-4-large: `/nl-search` hit rate 1.00; text 0.62, and 0.69 with rerank; similar 0.36, and 0.43 with rerank.
+   - Moving the chords and an English gloss to the front of the passage text roughly doubled embedding hit rates, held-out set included.
+9. **Done when:** the live URL works, one trace spans all services, the README has measured percentiles, and recall@5 has been measured on about 30 self-labelled `/similar` and `/nl-search` queries (and labelled as self-labelled).
 
 ### Weekend 3 (stretch): RAG and game day
 1. `POST /ask`:
