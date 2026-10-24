@@ -24,3 +24,13 @@ variable "alarm_email" {
   type    = string
   default = "vedatkemalozkan@gmail.com"
 }
+
+variable "eks" {
+  type    = bool
+  default = false
+}
+
+variable "eks_version" {
+  type    = string
+  default = "1.37"
+}

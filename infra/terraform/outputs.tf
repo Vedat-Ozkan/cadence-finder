@@ -25,3 +25,11 @@ output "node_instance_id" {
 output "wake_url" {
   value = local.env == "live" ? aws_lambda_function_url.wake[0].function_url : null
 }
+
+output "eks_cluster" {
+  value = local.eks == 1 ? aws_eks_cluster.main[0].name : null
+}
+
+output "ecr_registry" {
+  value = local.eks == 1 ? split("/", aws_ecr_repository.eks["search-api"].repository_url)[0] : null
+}

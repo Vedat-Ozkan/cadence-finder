@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+  - storage-class.yaml
+configMapGenerator:
+  - name: cadence-config
+    namespace: cadence
+    literals:
+      - AWS_REGION=us-east-1
+      - CADENCE_ENV=dev
+      - CADENCE_BUCKET=cadence-finder-dev-961136197755
+      - CADENCE_TABLE=cadence-dev
+      - CADENCE_QUEUE=ingest-dev
+      - EMBEDDER_URL=http://embedder:8000
+      - VOYAGE_MODEL=voyage-4-lite
+images:
+  - name: ghcr.io/vedat-ozkan/cadence-finder/ingest-worker
+    newName: 961136197755.dkr.ecr.us-east-1.amazonaws.com/cadence-finder/ingest-worker
+    newTag: eks
+  - name: ghcr.io/vedat-ozkan/cadence-finder/search-api
+    newName: 961136197755.dkr.ecr.us-east-1.amazonaws.com/cadence-finder/search-api
+    newTag: eks
+  - name: ghcr.io/vedat-ozkan/cadence-finder/embedder
+    newName: 961136197755.dkr.ecr.us-east-1.amazonaws.com/cadence-finder/embedder
+    newTag: eks
