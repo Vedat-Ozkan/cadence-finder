@@ -97,6 +97,8 @@ resource "aws_instance" "node" {
   vpc_security_group_ids = [aws_security_group.node[0].id]
   iam_instance_profile   = aws_iam_instance_profile.node[0].name
 
+  associate_public_ip_address = true
+
   metadata_options {
     http_tokens                 = "required"
     http_put_response_hop_limit = 2
@@ -104,7 +106,7 @@ resource "aws_instance" "node" {
 
   root_block_device {
     volume_type = "gp3"
-    volume_size = 20
+    volume_size = 10
     encrypted   = true
   }
 
@@ -112,6 +114,24 @@ resource "aws_instance" "node" {
     #!/bin/bash
     set -euo pipefail
     snap install aws-cli --classic
+    cat > /usr/local/bin/duckdns-update <<'SCRIPT'
+    #!/bin/bash
+    set -euo pipefail
+    token="$(/snap/bin/aws ssm get-parameter --region ${var.region} --name /cadence/${local.env}/DUCKDNS_TOKEN --with-decryption --query Parameter.Value --output text)"
+    curl -fsS --retry 5 "https://www.duckdns.org/update?domains=${var.duckdns_domain}&token=$token&ip="
+    SCRIPT
+    chmod 755 /usr/local/bin/duckdns-update
+    cat > /etc/systemd/system/duckdns-update.service <<'UNIT'
+    [Unit]
+    Wants=network-online.target
+    After=network-online.target snapd.seeded.service
+    [Service]
+    Type=oneshot
+    ExecStart=/usr/local/bin/duckdns-update
+    [Install]
+    WantedBy=multi-user.target
+    UNIT
+    systemctl enable --now duckdns-update.service
     curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="${var.k3s_version}" sh -s - --write-kubeconfig-mode 600
   EOT
 
@@ -122,10 +142,4 @@ resource "aws_instance" "node" {
   lifecycle {
     ignore_changes = [ami]
   }
-}
-
-resource "aws_eip" "node" {
-  count    = local.live
-  instance = aws_instance.node[0].id
-  domain   = "vpc"
 }

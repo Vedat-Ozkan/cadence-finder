@@ -161,7 +161,7 @@ Example of the headline query: `Ger ... @PAC?corpus=bps`. It uses a cadence-only
   - embedder: 192Mi;
   - postgres: 384Mi;
   - collector: 256Mi.
-- k3s overlay: Traefik ingress with Let's Encrypt (Traefik's ACME setting) on an `<eip>.sslip.io` hostname.
+- k3s overlay: Traefik ingress with Let's Encrypt (Traefik's ACME setting) on `cadence-finder.duckdns.org`.
 
 **Observability**
 - **Java:** the ADOT Java agent jar is copied into the image (`JAVA_TOOL_OPTIONS=-javaagent`), with `otel.instrumentation.aws-sdk.experimental-use-propagator-for-messaging=true` so trace context crosses SQS. Spring Boot structured JSON logs (`logging.structured.format.console=ecs`) go out over OTLP.
@@ -230,11 +230,17 @@ Each **⛔** step needs your explicit OK before it runs. These steps publish, cr
    - CI runs these tests only through `workflow_dispatch` with `natural_language: true`.
    - Errors use RFC 9457 problem details (`spring.mvc.problemdetails.enabled`).
 3. ⛔ Terraform `live` and the EC2/k3s instance. **Done 2026-10-24.** `terraform plan` creates 14 resources: the `live` bucket, queues and table; a t4g.medium on Ubuntu 24.04 arm64 that installs k3s v1.36.5 through user-data; IMDSv2 with hop limit 2; an encrypted 20 GB gp3 disk; an EIP; and a security group with only 80 and 443 open. **Access is through SSM Session Manager**, which replaces SSH on port 22: the node role has the app policy plus `AmazonSSMManagedInstanceCore`, and the app IAM policy is shared between the dev user and the live role. Deploy the k3s overlay and ingest the corpus. You get a live HTTPS URL.
-   - **Live at https://32.197.136.83.sslip.io** with a Let's Encrypt certificate. `scripts/deploy-live.sh [sha]` renders the k3s overlay and applies it through SSM Run Command. The node builds the `api-keys` and `ghcr` secrets from SecureString parameters under `/cadence/live/`, and generates a random Postgres password once.
+   - **Live at https://cadence-finder.duckdns.org** with a Let's Encrypt certificate. `scripts/deploy-live.sh [sha]` renders the k3s overlay and applies it through SSM Run Command. The node builds the `api-keys` and `ghcr` secrets from SecureString parameters under `/cadence/live/`, and generates a random Postgres password once.
    - SSM runs scripts with dash, so the remote part runs under `bash -s`.
    - The e2e suite against live (`AWS_ENDPOINT=` and the live bucket and DLQ) ingested all 188 movements and passed 21 tests in 9.5 minutes; the 19 natural-language tests were skipped. One `/nl-search` call returned `Ger ... @PAC` on `bps` with 25 hits.
    - Memory on the 3.8 GB node: worker 457Mi of 512Mi, search-api 229Mi, postgres 166Mi, embedder 90Mi; 1.7 GB available.
    - The embedder restarted once at first boot because Postgres wasn't ready yet.
+   - **Cost cap of $5 a month (2026-10-24):** the node is **stopped by default**.
+     - `scripts/node.sh start|stop|status` controls it. `start` takes about 80 s and waits until the URL answers.
+     - The Elastic IP was dropped, because it costs $3.65 a month even when stopped. A boot service, `duckdns-update`, reads `/cadence/live/DUCKDNS_TOKEN` and points the DuckDNS name at the node's new IP on every start.
+     - The disk is 10 GB, with 5.2 GB used.
+     - Stopped, the node costs about $0.80 a month (the disk). Running, it costs about $0.039 an hour, so the cap allows about 108 running hours a month.
+     - Postgres data and the Traefik certificate survive stop and start.
 4. Install the OTel agent and instrumentation, the ADOT collector, the dashboard and two alarms. ⛔ The SNS email subscription.
 5. Check that `POST /reindex/{id}` produces **one X-Ray trace** across search-api, SQS, the worker and the embedder. Add the manual `traceparent` fallback if it doesn't.
 6. `docs/runbook.md`: the DLQ alarm (inspect, fix, redrive), the p99 alarm, pod crash loop, pgvector disk full, stopping and starting the instance.

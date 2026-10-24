@@ -9,7 +9,7 @@ metadata:
     traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
 spec:
   rules:
-    - host: 32.197.136.83.sslip.io
+    - host: cadence-finder.duckdns.org
       http:
         paths:
           - path: /

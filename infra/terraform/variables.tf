@@ -14,3 +14,8 @@ variable "k3s_version" {
   type    = string
   default = "v1.36.5+k3s1"
 }
+
+variable "duckdns_domain" {
+  type    = string
+  default = "cadence-finder"
+}
