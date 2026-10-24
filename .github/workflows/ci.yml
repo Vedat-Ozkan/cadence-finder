@@ -37,6 +37,11 @@ jobs:
         env:
           RUN_NL: ${{ inputs.natural_language && '1' || '0' }}
         run: uv run --project e2e pytest e2e -q
+      - uses: grafana/setup-k6-action@v1.2.2
+        with:
+          k6-version: "2.3.0"
+      - name: Load smoke test
+        run: k6 run loadtest/smoke.js
       - name: Service logs
         if: failure()
         env:

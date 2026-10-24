@@ -9,3 +9,4 @@ build/
 __pycache__/
 *.tfplan
 .claude/settings.local.json
+loadtest/results/
