@@ -273,9 +273,12 @@ Each **⛔** step needs your explicit OK before it runs. These steps publish, cr
      - The DLQ alarm fires when the DLQ has more than 0 messages in a 5-minute window.
      - The `/search` p99 alarm fires above 0.5 s for 2 × 5 min, counting only windows with at least 50 requests. Post-wake JIT warm-up gives about 2 s p99 on a handful of requests, which would otherwise alarm after every wake.
      - Both notify SNS topic `cadence-finder-live-alarms`.
-   - **Waiting on you:**
-     - The email subscription is opt-in: set `alarm_email`, apply, and confirm the AWS email.
-     - The `dev` apply, which adds the log groups and permissions for kind, is planned but not applied.
+   - **Alarm email:** the subscription to `alarm_email` was applied on 2026-10-24. It only takes effect once the confirmation link in AWS's email is clicked.
+   - **kind verified on 2026-10-24** with the full stack: embedder, Postgres, collector, worker and search-api.
+     - The `dev` apply added the log groups and permissions.
+     - Images are built locally and loaded with `kind load`. The `api-keys` and `postgres` secrets were created from `.env` by you.
+     - Through `kubectl port-forward svc/search-api 18081:80`, the full e2e suite against real `dev` AWS passed: 23 passed, including `/reindex`; the 19 natural-language tests were skipped.
+     - Traces from kind reach X-Ray. The collector exported 433 log records, 7,896 metric points and 43,308 spans, with none failed.
 5. Check that `POST /reindex/{id}` produces **one X-Ray trace** across search-api, SQS, the worker and the embedder. Add the manual `traceparent` fallback if it doesn't. **Done 2026-10-24.**
    - `POST /reindex/{movementId}` returns 404 for unknown movements; otherwise it returns 202 and sends `{movementId}`.
    - The public ingress only routes `/search`, `/passages` and `/nl-search`, so `/reindex` and `/actuator` stay inside the cluster.
