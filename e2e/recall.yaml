@@ -1,0 +1,114 @@
+labels: >-
+  Self-labelled by the author. Each case pairs an input with a hand-written structured query (truth) whose
+  hits from search-api /search are the relevant set. The English texts avoid chord symbols such as Ger6 or
+  V65/V, which appear literally in the passage text, so lexical overlap does not do the work.
+metric:
+  relevant: >-
+    A returned passage or hit is relevant when it is in the same movement as a truth hit and its bar range
+    covers the truth hit's bars (firstBar <= truth.firstBar and lastBar >= truth.lastBar).
+  hitRate: >-
+    text and similar runs - fraction of cases with at least one relevant result in the top 5 (often called
+    recall@5; true recall would be tiny when a truth query has dozens of hits). nl run - fraction of cases whose
+    interpreted query finds at least one truth hit.
+  precision: >-
+    text and similar runs - mean over cases of relevant results in the top 5 divided by 5. nl run - mean over
+    cases of the share of the interpreted query's hits that are relevant.
+  recall: nl run only - mean over cases of the share of truth hits found by the interpreted query.
+  runs: >-
+    text - embedder POST /search {text, k 5} with rerank off and on (rerank reorders the top 20 vector
+    candidates, so it cannot rescue a passage outside them). similar - search-api GET
+    /passages/{id}/similar?k=5 from a source passage that covers a truth hit, rerank off and on; windows
+    overlapping the source are excluded by the service. nl - search-api POST /nl-search on the text cases,
+    only with RUN_NL=1 because it calls Claude; /nl-search pages are in movement-id order, not ranked, so it is
+    scored on the full result set of the interpreted query.
+cases:
+  - name: German sixth to V, quartets
+    truth: {query: Ger6 V, corpus: abc}
+    text: a German augmented sixth chord resolving to the dominant in a Beethoven string quartet
+  - name: German sixth to a PAC, Beethoven sonatas
+    truth: {query: Ger ... @PAC, corpus: bps}
+    text: a German augmented sixth that leads to a perfect authentic cadence in a Beethoven piano sonata
+  - name: Italian sixth to V, Mozart
+    truth: {query: It6 V, corpus: mps}
+    text: an Italian augmented sixth resolving to the dominant in a Mozart piano sonata
+  - name: French sixth to V
+    truth: {query: Fr6 V}
+    text: a French augmented sixth chord moving to the dominant
+  - name: deceptive cadence from V7 to vi
+    truth: {query: V7 vi@DC}
+    text: a dominant seventh chord that resolves deceptively to the submediant
+  - name: plagal cadence, Beethoven sonatas
+    truth: {query: "@PC", corpus: bps}
+    text: a plagal cadence in a Beethoven piano sonata
+  - name: evaded cadence, Mozart
+    truth: {query: "@EC", corpus: mps}
+    text: an evaded cadence in a Mozart piano sonata
+  - name: Neapolitan sixth to V
+    truth: {query: bII6 V}
+    text: a Neapolitan sixth chord moving to the dominant
+  - name: German sixth applied to vi
+    truth: {query: Ger6/vi V/vi}
+    text: a German sixth applied to the submediant, resolving to the dominant of the submediant
+  - name: Phrygian half cadence
+    truth: {query: iv6 V@HC}
+    text: a Phrygian half cadence, the minor subdominant in first inversion moving to the dominant
+  - name: ii65 V7 I PAC
+    truth: {query: ii65 V7 I@PAC}
+    text: a supertonic six-five chord, then the dominant seventh, then a perfect authentic cadence on the tonic
+  - name: diminished seventh to minor tonic
+    truth: {query: viio7 i}
+    text: a fully diminished leading-tone seventh chord resolving straight to a minor tonic
+  - name: flat six, Italian sixth, V
+    truth: {query: bVI It6 V}
+    text: the flat submediant chord, then an Italian augmented sixth, then the dominant
+  - name: applied dominant of IV
+    truth: {query: V7/IV IV}
+    text: a secondary dominant seventh of the subdominant resolving to the subdominant
+  - name: minor-key PAC from V7
+    truth: {query: V7 i@PAC}
+    text: a dominant seventh resolving to a minor tonic in a perfect authentic cadence
+  - name: opening I V I IV6, quartets
+    truth: {query: I V I IV6, corpus: abc}
+    text: tonic, dominant, tonic, then the subdominant in first inversion at the opening of a Beethoven string quartet
+  - name: similar to a German sixth to V, quartets
+    truth: {query: Ger6 V, corpus: abc}
+    passage: "abc:n01op18-1_01#54"
+  - name: similar to a German sixth to a PAC, Beethoven sonatas
+    truth: {query: Ger ... @PAC, corpus: bps}
+    passage: "bps:01-1#43"
+  - name: similar to an Italian sixth to V, Mozart
+    truth: {query: It6 V, corpus: mps}
+    passage: "mps:K279-3#33"
+  - name: similar to a French sixth to V
+    truth: {query: Fr6 V}
+    passage: "abc:n04op18-4_04#49"
+  - name: similar to a deceptive cadence from V7 to vi
+    truth: {query: V7 vi@DC}
+    passage: "bps:03-1#106"
+  - name: similar to a plagal cadence, Beethoven sonatas
+    truth: {query: "@PC", corpus: bps}
+    passage: "bps:07-1#121"
+  - name: similar to a Neapolitan sixth to V
+    truth: {query: bII6 V}
+    passage: "abc:n06op18-6_01#19"
+  - name: similar to a German sixth applied to vi
+    truth: {query: Ger6/vi V/vi}
+    passage: "abc:n01op18-1_01#71"
+  - name: similar to a Phrygian half cadence
+    truth: {query: iv6 V@HC}
+    passage: "bps:09-2#26"
+  - name: similar to ii65 V7 I PAC
+    truth: {query: ii65 V7 I@PAC}
+    passage: "bps:07-4#60"
+  - name: similar to a diminished seventh to minor tonic
+    truth: {query: viio7 i}
+    passage: "abc:n01op18-1_01#15"
+  - name: similar to flat six, Italian sixth, V
+    truth: {query: bVI It6 V}
+    passage: "bps:09-1#49"
+  - name: similar to an applied dominant of IV
+    truth: {query: V7/IV IV}
+    passage: "abc:n01op18-1_04#97"
+  - name: similar to the opening I V I IV6, quartets
+    truth: {query: I V I IV6, corpus: abc}
+    passage: "abc:n01op18-1_01#0"

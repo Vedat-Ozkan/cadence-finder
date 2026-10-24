@@ -10,3 +10,4 @@ __pycache__/
 *.tfplan
 .claude/settings.local.json
 loadtest/results/
+/e2e/results/
