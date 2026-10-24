@@ -87,7 +87,8 @@ cadence-finder/
 ```
 query   := step ( ( " " | " ... " ) step )*      " ... " = gap of 0..4 tokens
 step    := chord [ "@" CAD ] | "@" CAD             CAD ∈ PAC IAC HC DC EC PC
-chord   := DCML-style token; level auto-detected (figbass present -> L1, else L2)
+chord   := DCML-style token
+level   := per query: L1 if any chord has a figbass (e.g. V65, Ger6), else L2
 filters := ?corpus=bps|mps|abc&work=…&limit=50&cursor=…
 ```
 Example of the headline query: `Ger ... @PAC?corpus=bps`. It uses a cadence-only step because PAC arrivals are on `I` or `i` (Op. 2 No. 1 is in F minor and arrives on `i`). Each token is validated against the DCML numeral regex, so unknown chords return 400.
@@ -100,13 +101,13 @@ Example of the headline query: `Ger ... @PAC?corpus=bps`. It uses a cadence-only
 |---|---|---|---|
 | Movement | `MOV#abc:n01op18-1_01` (corpus-prefixed ids) | `META` | corpus, composer, work, movement, globalkey, hasCadences, tokens L1/L2 (lists of `{t, mnFrom, mnTo, mc, cad}`); under 400 KB |
 | Occurrence | `MOV#…` | `OCC#L2#3#0042` | `gram = "L2#V>I>V"` (GSI1 PK), `gsi1sk = "MOV#…#0042"` |
-| Cadence | `MOV#…` | `CAD#PAC#0107` | `gram = "CAD#PAC"` (same GSI) |
+| Cadence | `MOV#…` | `OCC#L2#@PAC#0107` | `gram = "L2#@PAC"` (same GSI; one per level) |
 
-- n-grams for n = 2..4 at both levels. That is about 65k harmonies × 3 × 2, roughly 400k items. On-demand writes for that cost well under $1.
+- n-grams for n = 1..4 at both levels, plus one cadence key per cadence. Single chords are included so a lone rare chord such as `Ger` can be the anchor. `CorpusCli stats` counts **441,332 keys** in total; on-demand writes for that cost well under $1.
 - GSI keys must be scalars, so each n-gram occurrence is its own item.
 - **Bar ranges:** `mnFrom` is the bar where the first matched chord starts. `mnTo` is the last bar the last matched chord sounds in, taken from its `duration_qb`.
 - **Search algorithm:**
-  1. Query GSI1 on the anchor, which is the longest contiguous run of up to 4 tokens with no gap (or `CAD#x`). Paginate with `limit` and `cursor`.
+  1. Query GSI1 on the anchor: the longest run of up to 4 chord steps with no gap between them, or a cadence key. Paginate with `limit` and `cursor`.
   2. Batch-get the movement META items. The API caches them, and there are only 188.
   3. Check the remaining steps and gaps against the token list.
   4. Return `{movementId, title, mnFrom, mnTo, matchedTokens}`.
@@ -188,7 +189,7 @@ Each **⛔** step needs your explicit OK before it runs. These steps publish, cr
 7. Update `PLAN.md` with this session's decisions: Voyage instead of the Anthropic key for embeddings, licence decided, NL parser in weekend 2, the tool stack table, multi-arch images, DynamoDB on-demand, the LocalStack token, k6 CI smoke vs node figures. **Done 2026-10-23.**
 
 ### Weekend 1: ingestion and exact search on kind
-1. `corpus-core`: the parser, both token levels, n-grams, windows and the query grammar. Run it on all 188 TSVs and print stats: chords per movement, how many cadences of each type per corpus, and every token value seen.
+1. `corpus-core`: the parser, both token levels, n-grams, windows and the query grammar. Run it on all 188 TSVs and print stats: chords per movement, how many cadences of each type per corpus, and every token value seen. **Done 2026-10-23.** Results: all 188 files parse; cadence counts after tokenising match the raw data exactly; the query grammar accepts every token in the corpus; `Ger ... @PAC` finds 25 matches in `bps`. Rows inside alternative endings that have no `duration_qb` (341 of 65,324) are treated as lasting 0, so their bar range ends in the bar where they start. Gradle 9 needs Java 17+ to run, so run it with `JAVA_HOME=~/.local/share/jdks/jdk-25.0.5+8`.
 2. Golden set: write `e2e/golden.yaml` with 10 progressions, each with expected movement and bar ranges, checked by hand against the TSVs. Example: op18-1 mvt 1 `I V I IV6` at bars 1–5 (IV6 lasts two bars). Include the headline `Ger ... @PAC` (one known hit is `bps` 01-1, bars 140–142, arriving on `i`), one It/Fr query, and one cadence query on `abc` that must return 400. Each entry asserts that its expected hit is **included** in the results, not that the result set matches exactly; for example, `I V I IV6` occurs in op18-1 mvt 1 at both bars 1–5 and bars 9–13.
 3. Terraform `dev`: S3, SQS + DLQ, DynamoDB. ⛔ `terraform apply`.
 4. ingest-worker and search-api `/search`.
