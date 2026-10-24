@@ -1,0 +1,22 @@
+Cadence Finder indexes harmonic annotations from three corpora published by the
+Digital and Cognitive Musicology Lab (DCML), EPFL. Each corpus is licensed under
+Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International
+(CC BY-NC-SA 4.0): https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+Data derived from these corpora (passage text, n-gram indexes, embeddings) is
+shared under the same licence. The corpora are not redistributed in this repository.
+
+1. The Annotated Beethoven Corpus (ABC): Beethoven string quartets.
+   Neuwirth, M., Harasim, D., Moss, F. C., Rohrmeier, M.
+   https://github.com/DCMLab/ABC  DOI: 10.5281/zenodo.7441343
+   Data report: https://doi.org/10.3389/fdigh.2018.00016
+
+2. Ludwig van Beethoven – Piano Sonatas (A corpus of annotated scores).
+   Hentschel, J., Rammos, Y., Neuwirth, M., et al.
+   https://github.com/DCMLab/beethoven_piano_sonatas  DOI: 10.5281/zenodo.7473560
+   Data report: https://doi.org/10.18061/emr.v18i1.8903
+
+3. The Annotated Mozart Sonatas: Score, Harmony, and Cadence.
+   Hentschel, J., Neuwirth, M., Rohrmeier, M.
+   https://github.com/DCMLab/mozart_piano_sonatas  DOI: 10.5281/zenodo.7424962
+   Data report: https://doi.org/10.5334/tismir.63
