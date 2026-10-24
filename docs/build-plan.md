@@ -212,7 +212,7 @@ Each **⛔** step needs your explicit OK before it runs. These steps publish, cr
    - In kind the JVM saw every laptop core: 97 threads and a 488 MiB peak RSS. `-XX:ActiveProcessorCount=2`, matching the t4g node, brought that to 336 MiB on the 40-movement test.
    - On the full 188 burst the peak is 476 MiB with a 268 MiB heap, and 468 MiB with a 224 MiB heap. About 240 MiB is non-heap and grows with load. `MALLOC_ARENA_MAX=2` made no difference.
    - Final setting: `-Xmx224m` and a 512Mi limit. Result: 0 restarts and a 468 MiB peak, so headroom is only about 44 MiB. Open item: find what the non-heap growth is (likely Netty direct buffers in the async SQS client, or compiler arenas) with NMT on a JDK image, or lower listener concurrency.
-7. CI (`ci.yml`): Gradle build, then e2e on compose and LocalStack. `images.yml` builds multi-arch images; ⛔ pushing them to GHCR.
+7. CI (`ci.yml`): Gradle build, then e2e on compose and LocalStack. `images.yml` builds multi-arch images; ⛔ pushing them to GHCR. `scripts/fetch-corpus.sh` fetches the three corpora at pinned commits, so CI and local runs test the same data as `golden.yaml`. The Java images only copy a jar onto `eclipse-temurin:25-jre`, so the arm64 build needs no emulation. `images.yml` builds with `push: false` until GHCR pushing is approved.
 8. **Done when:** the whole corpus is ingested on kind against real AWS, `curl` passes all 10 golden queries, a poison message lands in the DLQ, and CI is green.
 
 ### Weekend 2: similarity, NL search, deploy, observe
