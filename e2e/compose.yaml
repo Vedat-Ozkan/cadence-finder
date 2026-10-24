@@ -1,0 +1,40 @@
+x-aws: &aws
+  AWS_REGION: us-east-1
+  SPRING_CLOUD_AWS_ENDPOINT: http://localstack:4566
+  SPRING_CLOUD_AWS_CREDENTIALS_ACCESS_KEY: test
+  SPRING_CLOUD_AWS_CREDENTIALS_SECRET_KEY: test
+  SPRING_CLOUD_AWS_S3_PATH_STYLE_ACCESS_ENABLED: "true"
+  CADENCE_BUCKET: cadence-e2e
+  CADENCE_TABLE: cadence-e2e
+  CADENCE_QUEUE: ingest-e2e
+
+services:
+  localstack:
+    image: localstack/localstack:2026.10.2
+    environment:
+      LOCALSTACK_AUTH_TOKEN: ${LOCALSTACK_AUTH_TOKEN:?set LOCALSTACK_AUTH_TOKEN}
+      SERVICES: s3,sqs,dynamodb
+    ports:
+      - "127.0.0.1:4566:4566"
+    volumes:
+      - ./localstack/init.sh:/etc/localstack/init/ready.d/init.sh:ro
+    healthcheck:
+      test: ["CMD", "bash", "-c", "awslocal dynamodb describe-table --table-name cadence-e2e > /dev/null"]
+      interval: 3s
+      retries: 40
+
+  ingest-worker:
+    build: ../ingest-worker
+    environment: *aws
+    depends_on:
+      localstack:
+        condition: service_healthy
+
+  search-api:
+    build: ../search-api
+    environment: *aws
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      localstack:
+        condition: service_healthy

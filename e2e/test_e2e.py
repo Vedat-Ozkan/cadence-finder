@@ -1,0 +1,114 @@
+import json
+import os
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+from pathlib import Path
+
+import boto3
+import pytest
+import yaml
+
+HERE = Path(__file__).resolve().parent
+CORPUS = Path(os.environ.get("CORPUS_DIR", HERE.parent / "corpus"))
+API = os.environ.get("API_URL", "http://localhost:8080")
+AWS = {
+    "endpoint_url": os.environ.get("AWS_ENDPOINT", "http://localhost:4566"),
+    "region_name": "us-east-1",
+    "aws_access_key_id": "test",
+    "aws_secret_access_key": "test",
+}
+BUCKET = "cadence-e2e"
+DLQ = "ingest-e2e-dlq"
+CORPUS_DIRS = {"abc": "abc", "bps": "beethoven_piano_sonatas", "mps": "mozart_piano_sonatas"}
+GOLDEN = yaml.safe_load((HERE / "golden.yaml").read_text())
+
+
+def wait_for(condition, timeout, what):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if condition():
+            return
+        time.sleep(2)
+    pytest.fail(f"timed out after {timeout}s waiting for {what}")
+
+
+def get(path, params):
+    try:
+        with urllib.request.urlopen(f"{API}{path}?{urllib.parse.urlencode(params)}") as response:
+            return response.status, json.load(response)
+    except urllib.error.HTTPError as error:
+        return error.code, json.loads(error.read())
+    except OSError:
+        return None, None
+
+
+def search(query, corpus):
+    hits, cursor = [], None
+    while True:
+        params = {"q": query, "limit": 200}
+        if corpus:
+            params["corpus"] = corpus
+        if cursor:
+            params["cursor"] = cursor
+        status, body = get("/search", params)
+        if status != 200:
+            return status, body, hits
+        hits += body["results"]
+        cursor = body["nextCursor"]
+        if not cursor:
+            return status, body, hits
+
+
+@pytest.fixture(scope="session")
+def s3():
+    return boto3.client("s3", **AWS)
+
+
+@pytest.fixture(scope="session")
+def ingested(s3):
+    wait_for(lambda: get("/search", {"q": "I"})[0] == 200, 120, "search-api")
+    files = [
+        (corpus, path)
+        for corpus, directory in CORPUS_DIRS.items()
+        for path in sorted((CORPUS / directory / "harmonies").glob("*.harmonies.tsv"))
+    ]
+    assert len(files) == 188, f"expected 188 movement files under {CORPUS}, found {len(files)}"
+    for corpus, path in files:
+        s3.upload_file(str(path), BUCKET, f"raw/{corpus}/{path.name}")
+
+    def passages_written():
+        pages = s3.get_paginator("list_objects_v2").paginate(Bucket=BUCKET, Prefix="passages/")
+        return sum(page.get("KeyCount", 0) for page in pages) == len(files)
+
+    wait_for(passages_written, 900, "all movements to be ingested")
+
+
+def has_hit(hits, movement, bars):
+    return any(h["movementId"] == movement and [h["firstBar"], h["lastBar"]] == bars for h in hits)
+
+
+@pytest.mark.parametrize("case", GOLDEN, ids=[case["name"] for case in GOLDEN])
+def test_golden(ingested, case):
+    status, body, hits = search(case["query"], case.get("corpus"))
+    assert status == case["status"], body
+    for expected in case.get("includes", []):
+        assert has_hit(hits, expected["movement"], expected["bars"]), expected
+    for unexpected in case.get("excludes", []):
+        assert not has_hit(hits, unexpected["movement"], unexpected["bars"]), unexpected
+    if "count" in case:
+        assert len(hits) == case["count"]
+
+
+def test_malformed_file_lands_in_dead_letter_queue(ingested, s3):
+    key = "raw/bps/99-9.harmonies.tsv"
+    s3.put_object(Bucket=BUCKET, Key=key, Body=b"label\tchord\nV\tV\n")
+    sqs = boto3.client("sqs", **AWS)
+    dlq = sqs.get_queue_url(QueueName=DLQ)["QueueUrl"]
+
+    def in_dlq():
+        messages = sqs.receive_message(QueueUrl=dlq, MaxNumberOfMessages=10, WaitTimeSeconds=1).get("Messages", [])
+        return any(key in message["Body"] for message in messages)
+
+    wait_for(in_dlq, 180, f"{key} to reach the dead-letter queue")

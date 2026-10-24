@@ -200,7 +200,13 @@ Each **⛔** step needs your explicit OK before it runs. These steps publish, cr
    - The worker sets `queue-not-found-strategy: fail`, so it never creates queues.
    - The cursor is the last movement id returned; `limit` is 1–200.
    - Re-ingesting overwrites items but does not delete n-gram items that no longer exist; clear the table if the tokeniser changes.
-5. `e2e/compose.yaml` runs LocalStack, both services and an init script that creates the same resources. The e2e test uploads the corpus, waits until the queue is empty, and checks all 10 golden queries. It also uploads a malformed TSV and asserts it reaches the DLQ.
+5. `e2e/compose.yaml` runs LocalStack, both services and an init script that creates the same resources. The e2e test uploads the corpus, waits until every movement is ingested, and checks all the golden queries. It also uploads a malformed TSV and asserts it reaches the DLQ. **Done 2026-10-23.** LocalStack 2026.10.2. `e2e/test_e2e.py` is pytest run through uv: it uploads the 188 files, waits for 188 passage files, checks the 17 golden cases, then uploads `raw/bps/99-9.harmonies.tsv`, whose name is valid but whose content lacks the required columns, and asserts it reaches the DLQ. Result: 18 passed in about 3 minutes, with exactly 188 ingests. The e2e queue uses a 30 s visibility timeout; at 5 s, large movements were redelivered while still being processed. Run it with:
+   ```
+   JAVA_HOME=~/.local/share/jdks/jdk-25.0.5+8 ./gradlew :ingest-worker:bootJar :search-api:bootJar
+   docker compose -f e2e/compose.yaml --env-file .env up -d --build
+   uv run --project e2e pytest e2e -q
+   docker compose -f e2e/compose.yaml --env-file .env down -v
+   ```
 6. Kind overlay. Build images locally and load them with `kind load`. Run the same flow against the real `dev` AWS from kind.
 7. CI (`ci.yml`): Gradle build, then e2e on compose and LocalStack. `images.yml` builds multi-arch images; ⛔ pushing them to GHCR.
 8. **Done when:** the whole corpus is ingested on kind against real AWS, `curl` passes all 10 golden queries, a poison message lands in the DLQ, and CI is green.
