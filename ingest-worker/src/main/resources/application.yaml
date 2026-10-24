@@ -13,6 +13,7 @@ cadence:
   bucket: ${CADENCE_BUCKET}
   table: ${CADENCE_TABLE}
   queue: ${CADENCE_QUEUE}
+  embedder-url: ${EMBEDDER_URL}
 
 management:
   endpoint:

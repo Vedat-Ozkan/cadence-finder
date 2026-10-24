@@ -1,0 +1,38 @@
+- text: German augmented sixth before a perfect authentic cadence in Beethoven piano sonatas
+  includes: {movement: "bps:01-1", bars: [140, 142]}
+- text: the opening I V I IV6 of Beethoven's first string quartet
+  includes: {movement: "abc:n01op18-1_01", bars: [1, 5]}
+- text: Italian sixth resolving to the dominant at a half cadence in Mozart's piano sonatas
+  includes: {movement: "mps:K279-3", bars: [69, 70]}
+- text: French sixth chord resolving to V in the Beethoven quartets
+  includes: {movement: "abc:n04op18-4_04", bars: [105, 106]}
+- text: V65 of V moving to V in the Beethoven sonatas
+  includes: {movement: "bps:01-4", bars: [12, 13]}
+- text: half cadence approached from ii6 in Mozart
+  includes: {movement: "mps:K280-1", bars: [23, 26]}
+- text: dominant seventh to vi as a deceptive cadence in Beethoven's sonatas
+  includes: {movement: "bps:03-1", bars: [246, 248]}
+- text: cadential six-four, then V7, then a perfect authentic cadence on I in Mozart sonatas
+  includes: {movement: "mps:K279-1", bars: [30, 31]}
+- text: half-diminished ii to V to a minor-key tonic with a PAC in Beethoven sonatas
+  includes: {movement: "bps:07-2", bars: [20, 21]}
+- text: German sixth applied to vi resolving to V of vi, string quartets
+  includes: {movement: "abc:n03op18-3_03", bars: [25, 27]}
+- text: ii6 then I6 then viio6 in the quartets
+  includes: {movement: "abc:n03op18-3_04", bars: [116, 118]}
+- text: a German sixth that reaches I with a perfect authentic cadence a few chords later, Beethoven sonatas
+  includes: {movement: "bps:03-3", bars: [112, 117]}
+- text: Italian sixth followed by the dominant in Mozart
+  includes: {movement: "mps:K279-3", bars: [69, 70]}
+- text: deceptive cadence after a dominant seventh in the Beethoven piano sonatas
+  includes: {movement: "bps:03-1", bars: [246, 248]}
+- text: applied dominant V65/V leading to a half cadence in Mozart
+  includes: {movement: "mps:K279-1", bars: [23, 24]}
+- text: Ger6 going straight to V in the Beethoven string quartets
+  includes: {movement: "abc:n01op18-1_02", bars: [21, 22]}
+- text: Fr6 V in Beethoven's quartets
+  includes: {movement: "abc:n04op18-4_04", bars: [105, 106]}
+- text: a recipe for banana bread
+  status: 422
+- text: perfect authentic cadences in the Beethoven string quartets
+  status: 422

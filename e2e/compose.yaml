@@ -7,6 +7,7 @@ x-aws: &aws
   CADENCE_BUCKET: cadence-e2e
   CADENCE_TABLE: cadence-e2e
   CADENCE_QUEUE: ingest-e2e
+  EMBEDDER_URL: http://embedder:8000
 
 services:
   localstack:
@@ -23,18 +24,47 @@ services:
       interval: 3s
       retries: 40
 
+  postgres:
+    image: pgvector/pgvector:pg18
+    environment:
+      POSTGRES_PASSWORD: cadence
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 2s
+      retries: 30
+
+  embedder:
+    build: ../embedder
+    environment:
+      DATABASE_URL: postgresql://postgres:cadence@postgres:5432/postgres
+      VOYAGE_API_KEY: ${VOYAGE_API_KEY:?set VOYAGE_API_KEY}
+      VOYAGE_MODEL: voyage-4-lite
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
+      interval: 2s
+      retries: 30
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   ingest-worker:
     build: ../ingest-worker
     environment: *aws
     depends_on:
       localstack:
         condition: service_healthy
+      embedder:
+        condition: service_healthy
 
   search-api:
     build: ../search-api
-    environment: *aws
+    environment:
+      <<: *aws
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     ports:
       - "127.0.0.1:8080:8080"
     depends_on:
       localstack:
+        condition: service_healthy
+      embedder:
         condition: service_healthy

@@ -23,6 +23,9 @@ DLQ = os.environ.get("CADENCE_DLQ", "ingest-e2e-dlq")
 DLQ_TIMEOUT = int(os.environ.get("DLQ_TIMEOUT", "180"))
 CORPUS_DIRS = {"abc": "abc", "bps": "beethoven_piano_sonatas", "mps": "mozart_piano_sonatas"}
 GOLDEN = yaml.safe_load((HERE / "golden.yaml").read_text())
+NATURAL_LANGUAGE = yaml.safe_load((HERE / "nl.yaml").read_text())
+RUN_NL = os.environ.get("RUN_NL") == "1"
+SKIP_INGEST = os.environ.get("SKIP_INGEST") == "1"
 
 
 def wait_for(condition, timeout, what):
@@ -32,6 +35,17 @@ def wait_for(condition, timeout, what):
             return
         time.sleep(2)
     pytest.fail(f"timed out after {timeout}s waiting for {what}")
+
+
+def post(path, body):
+    request = urllib.request.Request(
+        f"{API}{path}", data=json.dumps(body).encode(), headers={"content-type": "application/json"}
+    )
+    try:
+        with urllib.request.urlopen(request) as response:
+            return response.status, json.load(response)
+    except urllib.error.HTTPError as error:
+        return error.code, json.loads(error.read())
 
 
 def get(path, params):
@@ -69,6 +83,8 @@ def s3():
 @pytest.fixture(scope="session")
 def ingested(s3):
     wait_for(lambda: get("/search", {"q": "I"})[0] == 200, 120, "search-api")
+    if SKIP_INGEST:
+        return
     files = [
         (corpus, path)
         for corpus, directory in CORPUS_DIRS.items()
@@ -103,6 +119,44 @@ def test_golden(ingested, case):
         assert len(hits) == case["count"]
 
 
+def similar(passage_id, **params):
+    return get(f"/passages/{urllib.parse.quote(passage_id, safe='')}/similar", params)
+
+
+@pytest.mark.parametrize("rerank", [False, True])
+def test_similar_passages_skip_overlapping_windows(ingested, s3, rerank):
+    lines = s3.get_object(Bucket=BUCKET, Key="passages/bps/01-1.jsonl")["Body"].read().decode().splitlines()
+    source = json.loads(lines[0])
+    status, body = similar(source["id"], k=5, rerank=str(rerank).lower())
+    assert status == 200, body
+    hits = body["results"]
+    assert len(hits) == 5
+    scores = [hit["score"] for hit in hits]
+    assert scores == sorted(scores, reverse=True)
+    for hit in hits:
+        overlaps = hit["firstBar"] <= source["lastBar"] and hit["lastBar"] >= source["firstBar"]
+        assert not (hit["movementId"] == source["movementId"] and overlaps), hit
+
+
+def test_similar_unknown_passage(ingested):
+    status, _ = similar("bps:does-not-exist#0")
+    assert status == 404
+
+
+@pytest.mark.skipif(not RUN_NL, reason="calls the Claude API; set RUN_NL=1")
+@pytest.mark.parametrize("case", NATURAL_LANGUAGE, ids=[case["text"] for case in NATURAL_LANGUAGE])
+def test_natural_language(ingested, case):
+    status, body = post("/nl-search", {"text": case["text"]})
+    assert status == case.get("status", 200), body
+    if "includes" in case:
+        interpretation = body["interpretation"]
+        _, _, hits = search(interpretation["query"], interpretation["corpus"] or None)
+        expected = case["includes"]
+        starts = {(hit["movementId"], hit["firstBar"]) for hit in hits}
+        assert (expected["movement"], expected["bars"][0]) in starts, interpretation
+
+
+@pytest.mark.skipif(SKIP_INGEST, reason="needs a fresh ingest")
 def test_malformed_file_lands_in_dead_letter_queue(ingested, s3):
     key = "raw/bps/99-9.harmonies.tsv"
     s3.put_object(Bucket=BUCKET, Key=key, Body=b"label\tchord\nV\tV\n")

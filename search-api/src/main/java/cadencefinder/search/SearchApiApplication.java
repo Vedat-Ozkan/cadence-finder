@@ -1,6 +1,8 @@
 package cadencefinder.search;
 
 import cadencefinder.store.CadenceTable;
+import com.anthropic.client.AnthropicClient;
+import com.anthropic.client.okhttp.AnthropicOkHttpClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -12,6 +14,11 @@ public class SearchApiApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(SearchApiApplication.class, args);
+    }
+
+    @Bean
+    AnthropicClient anthropicClient() {
+        return AnthropicOkHttpClient.fromEnv();
     }
 
     @Bean

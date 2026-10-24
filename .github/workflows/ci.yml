@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      natural_language:
+        description: Also run the natural-language tests (calls the Claude API)
+        type: boolean
+        default: false
 
 jobs:
   build-and-e2e:
@@ -24,11 +30,16 @@ jobs:
       - name: Start stack
         env:
           LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
+          VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ inputs.natural_language && secrets.ANTHROPIC_API_KEY || '' }}
         run: docker compose -f e2e/compose.yaml up -d --build --wait
       - name: End-to-end tests
+        env:
+          RUN_NL: ${{ inputs.natural_language && '1' || '0' }}
         run: uv run --project e2e pytest e2e -q
       - name: Service logs
         if: failure()
         env:
           LOCALSTACK_AUTH_TOKEN: unused
-        run: docker compose -f e2e/compose.yaml logs --no-color ingest-worker search-api
+          VOYAGE_API_KEY: unused
+        run: docker compose -f e2e/compose.yaml logs --no-color ingest-worker search-api embedder
