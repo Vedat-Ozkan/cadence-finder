@@ -16,7 +16,7 @@ jobs:
           distribution: temurin
           java-version: "25"
       - uses: gradle/actions/setup-gradle@v6
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.2
       - name: Build
         run: ./gradlew build :ingest-worker:bootJar :search-api:bootJar
       - name: Fetch corpus
