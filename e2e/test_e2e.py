@@ -4,6 +4,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import boto3
@@ -13,14 +14,13 @@ import yaml
 HERE = Path(__file__).resolve().parent
 CORPUS = Path(os.environ.get("CORPUS_DIR", HERE.parent / "corpus"))
 API = os.environ.get("API_URL", "http://localhost:8080")
-AWS = {
-    "endpoint_url": os.environ.get("AWS_ENDPOINT", "http://localhost:4566"),
-    "region_name": "us-east-1",
-    "aws_access_key_id": "test",
-    "aws_secret_access_key": "test",
-}
-BUCKET = "cadence-e2e"
-DLQ = "ingest-e2e-dlq"
+ENDPOINT = os.environ.get("AWS_ENDPOINT", "http://localhost:4566")
+AWS = {"region_name": "us-east-1"} | (
+    {"endpoint_url": ENDPOINT, "aws_access_key_id": "test", "aws_secret_access_key": "test"} if ENDPOINT else {}
+)
+BUCKET = os.environ.get("CADENCE_BUCKET", "cadence-e2e")
+DLQ = os.environ.get("CADENCE_DLQ", "ingest-e2e-dlq")
+DLQ_TIMEOUT = int(os.environ.get("DLQ_TIMEOUT", "180"))
 CORPUS_DIRS = {"abc": "abc", "bps": "beethoven_piano_sonatas", "mps": "mozart_piano_sonatas"}
 GOLDEN = yaml.safe_load((HERE / "golden.yaml").read_text())
 
@@ -75,12 +75,14 @@ def ingested(s3):
         for path in sorted((CORPUS / directory / "harmonies").glob("*.harmonies.tsv"))
     ]
     assert len(files) == 188, f"expected 188 movement files under {CORPUS}, found {len(files)}"
+    started = datetime.now(timezone.utc) - timedelta(seconds=5)
     for corpus, path in files:
         s3.upload_file(str(path), BUCKET, f"raw/{corpus}/{path.name}")
 
     def passages_written():
         pages = s3.get_paginator("list_objects_v2").paginate(Bucket=BUCKET, Prefix="passages/")
-        return sum(page.get("KeyCount", 0) for page in pages) == len(files)
+        fresh = [o for page in pages for o in page.get("Contents", []) if o["LastModified"] >= started]
+        return len(fresh) == len(files)
 
     wait_for(passages_written, 900, "all movements to be ingested")
 
@@ -109,6 +111,12 @@ def test_malformed_file_lands_in_dead_letter_queue(ingested, s3):
 
     def in_dlq():
         messages = sqs.receive_message(QueueUrl=dlq, MaxNumberOfMessages=10, WaitTimeSeconds=1).get("Messages", [])
-        return any(key in message["Body"] for message in messages)
+        mine = [m for m in messages if key in m["Body"]]
+        for message in mine:
+            sqs.delete_message(QueueUrl=dlq, ReceiptHandle=message["ReceiptHandle"])
+        return bool(mine)
 
-    wait_for(in_dlq, 180, f"{key} to reach the dead-letter queue")
+    try:
+        wait_for(in_dlq, DLQ_TIMEOUT, f"{key} to reach the dead-letter queue")
+    finally:
+        s3.delete_object(Bucket=BUCKET, Key=key)

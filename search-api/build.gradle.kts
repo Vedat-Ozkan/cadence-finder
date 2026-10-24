@@ -18,6 +18,7 @@ dependencies {
     implementation(platform(libs.spring.cloud.aws.bom))
     implementation(project(":cadence-store"))
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("io.awspring.cloud:spring-cloud-aws-starter-dynamodb")
     runtimeOnly("software.amazon.awssdk:signin")
 }

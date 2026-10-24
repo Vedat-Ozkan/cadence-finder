@@ -1,0 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+  - https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.9.0/components.yaml
+patches:
+  - target:
+      kind: Deployment
+      name: metrics-server
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: --kubelet-insecure-tls
+configMapGenerator:
+  - name: cadence-config
+    namespace: cadence
+    literals:
+      - AWS_REGION=us-east-1
+      - CADENCE_BUCKET=cadence-finder-dev-961136197755
+      - CADENCE_TABLE=cadence-dev
+      - CADENCE_QUEUE=ingest-dev
+images:
+  - name: ghcr.io/vedat-ozkan/cadence-finder/ingest-worker
+    newName: cadence/ingest-worker
+    newTag: dev
+  - name: ghcr.io/vedat-ozkan/cadence-finder/search-api
+    newName: cadence/search-api
+    newTag: dev

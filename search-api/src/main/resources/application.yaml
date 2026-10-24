@@ -8,3 +8,9 @@ spring:
 
 cadence:
   table: ${CADENCE_TABLE}
+
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true

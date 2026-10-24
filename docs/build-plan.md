@@ -157,7 +157,7 @@ Example of the headline query: `Ger ... @PAC?corpus=bps`. It uses a cadence-only
 - It also has the postgres StatefulSet, a ConfigMap, Secrets (created out-of-band) and the ADOT collector.
 - An HPA scales search-api on CPU; this needs metrics-server on kind (k3s ships it).
 - Memory limits, to fit in 4 GB:
-  - JVMs: 448Mi each, with `-XX:MaxRAMPercentage=70`;
+  - JVMs: `-Xmx224m -XX:ActiveProcessorCount=2`. search-api 448Mi, ingest-worker **512Mi** (measured, see weekend 1 step 6);
   - embedder: 192Mi;
   - postgres: 384Mi;
   - collector: 256Mi.
@@ -207,7 +207,11 @@ Each **⛔** step needs your explicit OK before it runs. These steps publish, cr
    uv run --project e2e pytest e2e -q
    docker compose -f e2e/compose.yaml --env-file .env down -v
    ```
-6. Kind overlay. Build images locally and load them with `kind load`. Run the same flow against the real `dev` AWS from kind.
+6. Kind overlay. Build images locally and load them with `kind load`. Run the same flow against the real `dev` AWS from kind. **Done 2026-10-23.** `deploy/k8s/base` plus `overlays/kind` (with metrics-server v0.9.0 for the HPA). The pods use an access key for `cadence-finder-dev-app`, stored in Secret `aws-credentials`, which you create; the key is never committed. The full e2e suite passes through kind against real AWS, 18/18 (`AWS_ENDPOINT= CADENCE_BUCKET=cadence-finder-dev-961136197755 CADENCE_DLQ=ingest-dev-dlq DLQ_TIMEOUT=600`, with a port-forward to `svc/search-api`). boto3 needs the `crt` extra to use `aws login` sessions.
+   **Memory finding:** the worker was OOMKilled during the 188-movement burst. Measured with cgroup `memory.peak` and NMT:
+   - In kind the JVM saw every laptop core: 97 threads and a 488 MiB peak RSS. `-XX:ActiveProcessorCount=2`, matching the t4g node, brought that to 336 MiB on the 40-movement test.
+   - On the full 188 burst the peak is 476 MiB with a 268 MiB heap, and 468 MiB with a 224 MiB heap. About 240 MiB is non-heap and grows with load. `MALLOC_ARENA_MAX=2` made no difference.
+   - Final setting: `-Xmx224m` and a 512Mi limit. Result: 0 restarts and a 468 MiB peak, so headroom is only about 44 MiB. Open item: find what the non-heap growth is (likely Netty direct buffers in the async SQS client, or compiler arenas) with NMT on a JDK image, or lower listener concurrency.
 7. CI (`ci.yml`): Gradle build, then e2e on compose and LocalStack. `images.yml` builds multi-arch images; ⛔ pushing them to GHCR.
 8. **Done when:** the whole corpus is ingested on kind against real AWS, `curl` passes all 10 golden queries, a poison message lands in the DLQ, and CI is green.
 

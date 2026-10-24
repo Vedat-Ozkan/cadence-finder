@@ -2,7 +2,7 @@
 name = "cadence-e2e"
 version = "0"
 requires-python = ">=3.14"
-dependencies = ["pytest", "boto3", "pyyaml"]
+dependencies = ["pytest", "boto3[crt]", "pyyaml"]
 
 [tool.uv]
 package = false

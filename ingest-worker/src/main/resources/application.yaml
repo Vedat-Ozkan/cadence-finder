@@ -13,3 +13,9 @@ cadence:
   bucket: ${CADENCE_BUCKET}
   table: ${CADENCE_TABLE}
   queue: ${CADENCE_QUEUE}
+
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
