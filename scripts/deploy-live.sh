@@ -3,12 +3,13 @@ set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 tag="${1:-$(git -C "$root" rev-parse HEAD)}"
-instance="$(terraform -chdir="$root/infra/terraform" output -raw node_instance_id)"
+instance="$(TF_WORKSPACE=live terraform -chdir="$root/infra/terraform" output -raw node_instance_id)"
 
 manifest="$(kubectl kustomize "$root/deploy/k8s/overlays/k3s" \
   | sed "s#\(ghcr.io/vedat-ozkan/cadence-finder/[a-z-]*\):main#\1:$tag#" | gzip | base64 -w0)"
 
 read -r -d '' script <<SCRIPT || true
+bash -s <<'REMOTE'
 set -euo pipefail
 export AWS_REGION=us-east-1
 kc() { k3s kubectl "\$@"; }
@@ -27,6 +28,7 @@ echo "$manifest" | base64 -d | gunzip | kc apply -f -
 for workload in statefulset/postgres deployment/embedder deployment/ingest-worker deployment/search-api; do
   kc -n cadence rollout status "\$workload" --timeout=300s
 done
+REMOTE
 SCRIPT
 
 command_id="$(aws ssm send-command --instance-ids "$instance" --document-name AWS-RunShellScript \
