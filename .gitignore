@@ -7,3 +7,4 @@ build/
 .gradle/
 .venv/
 __pycache__/
+*.tfplan
