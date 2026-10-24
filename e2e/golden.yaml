@@ -1,0 +1,128 @@
+- name: opening progression, Op. 18 No. 1 mvt 1
+  query: I V I IV6
+  corpus: abc
+  status: 200
+  includes:
+    - movement: abc:n01op18-1_01
+      bars: [1, 5]
+
+- name: German sixth leading to a perfect authentic cadence
+  query: Ger ... @PAC
+  corpus: bps
+  status: 200
+  count: 25
+  includes:
+    - movement: bps:01-1
+      bars: [140, 142]
+
+- name: gap of two chords between a German sixth and a PAC
+  query: Ger ... I@PAC
+  corpus: bps
+  status: 200
+  includes:
+    - movement: bps:03-3
+      bars: [112, 117]
+
+- name: Italian sixth to a half cadence
+  query: It6 V
+  corpus: mps
+  status: 200
+  includes:
+    - movement: mps:K279-3
+      bars: [69, 70]
+
+- name: French sixth to the dominant
+  query: Fr6 V
+  corpus: abc
+  status: 200
+  includes:
+    - movement: abc:n04op18-4_04
+      bars: [105, 106]
+
+- name: applied dominant of the dominant after a local key change, minor mode
+  query: V65/V V
+  corpus: bps
+  status: 200
+  includes:
+    - movement: bps:01-4
+      bars: [12, 13]
+
+- name: half cadence after a long ii6, through a cadential six-four
+  query: ii6 V@HC
+  corpus: mps
+  status: 200
+  includes:
+    - movement: mps:K280-1
+      bars: [23, 26]
+
+- name: deceptive cadence
+  query: V7 vi@DC
+  corpus: bps
+  status: 200
+  includes:
+    - movement: bps:03-1
+      bars: [246, 248]
+
+- name: cadential six-four, V7, perfect authentic cadence
+  query: V V7 I@PAC
+  corpus: mps
+  status: 200
+  includes:
+    - movement: mps:K279-1
+      bars: [30, 31]
+
+- name: reduced level merges V(64) and V7, minor-key PAC
+  query: ii% V i@PAC
+  corpus: bps
+  status: 200
+  includes:
+    - movement: bps:07-2
+      bars: [20, 21]
+
+- name: applied German sixth
+  query: Ger6/vi V/vi
+  corpus: abc
+  status: 200
+  includes:
+    - movement: abc:n03op18-3_03
+      bars: [25, 27]
+
+- name: cadence label on a row without a chord attaches to the previous chord
+  query: ii V V7@HC
+  corpus: mps
+  status: 200
+  includes:
+    - movement: mps:K279-2
+      bars: [40, 42]
+
+- name: alternative endings, the first ending has no durations
+  query: ii6 I6 viio6
+  corpus: abc
+  status: 200
+  includes:
+    - movement: abc:n03op18-3_04
+      bars: [116, 118]
+    - movement: abc:n03op18-3_04
+      bars: [116, 119]
+
+- name: no match across a no-harmony (@none) row
+  query: V ii
+  corpus: abc
+  status: 200
+  excludes:
+    - movement: abc:n01op18-1_01
+      bars: [64, 65]
+
+- name: valid query with no matches
+  query: Fr6 ... @DC
+  status: 200
+  count: 0
+
+- name: cadence filter on a corpus without cadence labels
+  query: V @PAC
+  corpus: abc
+  status: 400
+
+- name: unknown chord
+  query: Ger6 Xyz
+  status: 400
