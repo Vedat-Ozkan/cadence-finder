@@ -1,5 +1,5 @@
 .env
-corpus/
+/corpus/
 *.tfstate
 *.tfstate.*
 .terraform/
