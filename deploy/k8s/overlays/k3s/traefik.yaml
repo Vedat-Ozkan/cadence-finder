@@ -7,6 +7,9 @@ spec:
   valuesContent: |-
     persistence:
       enabled: true
+    logs:
+      access:
+        enabled: true
     certificatesResolvers:
       letsencrypt:
         acme:

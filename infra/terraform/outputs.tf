@@ -21,3 +21,7 @@ output "app_user" {
 output "node_instance_id" {
   value = local.env == "live" ? aws_instance.node[0].id : null
 }
+
+output "wake_url" {
+  value = local.env == "live" ? aws_lambda_function_url.wake[0].function_url : null
+}

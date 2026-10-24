@@ -241,6 +241,19 @@ Each **⛔** step needs your explicit OK before it runs. These steps publish, cr
      - The disk is 10 GB, with 5.2 GB used.
      - Stopped, the node costs about $0.80 a month (the disk). Running, it costs about $0.039 an hour, so the cap allows about 108 running hours a month.
      - Postgres data and the Traefik certificate survive stop and start.
+   - **Wake on visit, stop when idle (2026-10-24):**
+     - The public link is the `wake_url` Terraform output, a Lambda function URL (Python 3.14, arm64).
+       - If the node is stopped, the Lambda starts it and serves a page that reloads every 10 s.
+       - Once `/search` answers, it redirects to the app, keeping the requested path. A bare link goes to the headline query.
+     - On the node, the `idle-stop.timer` runs every 5 min and powers the node off once both are true:
+       - it has been up for at least 30 min;
+       - Traefik's access log shows no `/search`, `/passages` or `/nl-search` request in the last 30 min. Bots probing `/` don't count.
+     - **Cold start, measured:**
+       - the first wake request returns in 2.2 s;
+       - the instance is running after about 16 s;
+       - the redirect comes after 80 s;
+       - the first query then takes 0.8 s, so about 82 s from click to results in total.
+     - Expected cost is about $1–2 a month: the visit time plus 30 min, plus the $0.80 disk.
 4. Install the OTel agent and instrumentation, the ADOT collector, the dashboard and two alarms. ⛔ The SNS email subscription.
 5. Check that `POST /reindex/{id}` produces **one X-Ray trace** across search-api, SQS, the worker and the embedder. Add the manual `traceparent` fallback if it doesn't.
 6. `docs/runbook.md`: the DLQ alarm (inspect, fix, redrive), the p99 alarm, pod crash loop, pgvector disk full, stopping and starting the instance.

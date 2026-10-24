@@ -132,6 +132,28 @@ resource "aws_instance" "node" {
     WantedBy=multi-user.target
     UNIT
     systemctl enable --now duckdns-update.service
+    cat > /usr/local/bin/idle-stop <<'SCRIPT'
+    #!/bin/bash
+    set -uo pipefail
+    [ "$(cut -d. -f1 /proc/uptime)" -lt 1800 ] && exit 0
+    requests="$(k3s kubectl -n kube-system logs deploy/traefik --since=30m 2>/dev/null | grep -cE '"(GET|POST) /(search|passages|nl-search)')"
+    [ "$${requests:-0}" -gt 0 ] && exit 0
+    systemctl poweroff
+    SCRIPT
+    chmod 755 /usr/local/bin/idle-stop
+    cat > /etc/systemd/system/idle-stop.service <<'UNIT'
+    [Service]
+    Type=oneshot
+    ExecStart=/usr/local/bin/idle-stop
+    UNIT
+    cat > /etc/systemd/system/idle-stop.timer <<'UNIT'
+    [Timer]
+    OnBootSec=5min
+    OnUnitActiveSec=5min
+    [Install]
+    WantedBy=timers.target
+    UNIT
+    systemctl enable --now idle-stop.timer
     curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="${var.k3s_version}" sh -s - --write-kubeconfig-mode 600
   EOT
 
