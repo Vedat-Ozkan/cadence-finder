@@ -21,6 +21,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-restclient")
     implementation("io.awspring.cloud:spring-cloud-aws-starter-dynamodb")
+    implementation("io.awspring.cloud:spring-cloud-aws-starter-sqs")
     implementation("com.anthropic:anthropic-java:3.3.0")
     runtimeOnly("software.amazon.awssdk:signin")
 }

@@ -143,6 +143,19 @@ def test_similar_unknown_passage(ingested):
     assert status == 404
 
 
+def test_reindex_rewrites_the_movement(ingested, s3):
+    key = "passages/bps/01-1.jsonl"
+    before = s3.head_object(Bucket=BUCKET, Key=key)["LastModified"]
+    status, body = post("/reindex/bps:01-1", {})
+    assert status == 202, body
+    wait_for(lambda: s3.head_object(Bucket=BUCKET, Key=key)["LastModified"] > before, 120, "bps:01-1 to be reindexed")
+
+
+def test_reindex_unknown_movement(ingested):
+    status, _ = post("/reindex/bps:does-not-exist", {})
+    assert status == 404
+
+
 @pytest.mark.skipif(not RUN_NL, reason="calls the Claude API; set RUN_NL=1")
 @pytest.mark.parametrize("case", NATURAL_LANGUAGE, ids=[case["text"] for case in NATURAL_LANGUAGE])
 def test_natural_language(ingested, case):

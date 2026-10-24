@@ -12,7 +12,21 @@ spec:
     - host: cadence-finder.duckdns.org
       http:
         paths:
-          - path: /
+          - path: /search
+            pathType: Prefix
+            backend:
+              service:
+                name: search-api
+                port:
+                  name: http
+          - path: /passages
+            pathType: Prefix
+            backend:
+              service:
+                name: search-api
+                port:
+                  name: http
+          - path: /nl-search
             pathType: Prefix
             backend:
               service:

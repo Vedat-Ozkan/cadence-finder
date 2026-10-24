@@ -10,6 +10,7 @@ configMapGenerator:
     namespace: cadence
     literals:
       - AWS_REGION=us-east-1
+      - CADENCE_ENV=live
       - CADENCE_BUCKET=cadence-finder-live-961136197755
       - CADENCE_TABLE=cadence-live
       - CADENCE_QUEUE=ingest-live

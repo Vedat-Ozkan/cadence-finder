@@ -35,6 +35,16 @@ locals {
         ]
         Resource = [aws_dynamodb_table.cadence.arn, "${aws_dynamodb_table.cadence.arn}/index/*"]
       },
+      {
+        Effect   = "Allow"
+        Action   = ["xray:PutTraceSegments", "xray:PutTelemetryRecords", "xray:GetSamplingRules", "xray:GetSamplingTargets"]
+        Resource = "*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["logs:CreateLogStream", "logs:PutLogEvents", "logs:DescribeLogStreams"]
+        Resource = ["${aws_cloudwatch_log_group.app.arn}:*", "${aws_cloudwatch_log_group.metrics.arn}:*"]
+      },
     ]
   })
 }

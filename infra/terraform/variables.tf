@@ -19,3 +19,8 @@ variable "duckdns_domain" {
   type    = string
   default = "cadence-finder"
 }
+
+variable "alarm_email" {
+  type    = string
+  default = ""
+}

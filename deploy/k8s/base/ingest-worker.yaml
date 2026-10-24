@@ -25,12 +25,16 @@ spec:
           envFrom:
             - configMapRef:
                 name: cadence-config
+            - configMapRef:
+                name: otel
             - secretRef:
                 name: aws-credentials
                 optional: true
           env:
             - name: JAVA_TOOL_OPTIONS
-              value: -Xmx224m -XX:ActiveProcessorCount=2
+              value: -javaagent:/app/aws-opentelemetry-agent.jar -Xmx224m -XX:ActiveProcessorCount=2
+            - name: OTEL_SERVICE_NAME
+              value: ingest-worker
           startupProbe:
             httpGet:
               path: /actuator/health/liveness
@@ -48,8 +52,8 @@ spec:
           resources:
             requests:
               cpu: 100m
-              memory: 512Mi
+              memory: 640Mi
             limits:
-              memory: 512Mi
+              memory: 640Mi
           securityContext:
             allowPrivilegeEscalation: false
