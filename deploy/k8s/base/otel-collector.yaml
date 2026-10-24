@@ -108,6 +108,9 @@ data:
         metric_declarations:
           - dimensions: [[service.name, http.route]]
             metric_name_selectors: [http.server.request.duration]
+            label_matchers:
+              - label_names: [http.route]
+                regex: ^/(search|passages|nl-search|reindex)
       awscloudwatchlogs:
         region: ${env:AWS_REGION}
         log_group_name: /cadence-finder/${env:CADENCE_ENV}/app

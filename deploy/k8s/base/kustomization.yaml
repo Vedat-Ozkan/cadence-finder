@@ -16,6 +16,7 @@ configMapGenerator:
       - OTEL_PROPAGATORS=tracecontext,baggage,xray
       - OTEL_TRACES_SAMPLER=parentbased_always_on
       - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION=base2_exponential_bucket_histogram
       - OTEL_LOGS_EXPORTER=otlp
       - OTEL_AWS_APPLICATION_SIGNALS_ENABLED=false
       - OTEL_INSTRUMENTATION_AWS_SDK_EXPERIMENTAL_USE_PROPAGATOR_FOR_MESSAGING=true
