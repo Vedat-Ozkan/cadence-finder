@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+  - ingress.yaml
+  - traefik.yaml
+  - service-account.yaml
+configMapGenerator:
+  - name: cadence-config
+    namespace: cadence
+    literals:
+      - AWS_REGION=us-east-1
+      - CADENCE_BUCKET=cadence-finder-live-961136197755
+      - CADENCE_TABLE=cadence-live
+      - CADENCE_QUEUE=ingest-live
+      - EMBEDDER_URL=http://embedder:8000
+      - VOYAGE_MODEL=voyage-4-large
+images:
+  - name: ghcr.io/vedat-ozkan/cadence-finder/ingest-worker
+    newTag: main
+  - name: ghcr.io/vedat-ozkan/cadence-finder/search-api
+    newTag: main
+  - name: ghcr.io/vedat-ozkan/cadence-finder/embedder
+    newTag: main

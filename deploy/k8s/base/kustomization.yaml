@@ -5,3 +5,5 @@ resources:
   - namespace.yaml
   - ingest-worker.yaml
   - search-api.yaml
+  - postgres.yaml
+  - embedder.yaml

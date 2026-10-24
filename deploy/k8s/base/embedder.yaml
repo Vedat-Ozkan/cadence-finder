@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: embedder
+  labels:
+    app: embedder
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: embedder
+  template:
+    metadata:
+      labels:
+        app: embedder
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: embedder
+          image: ghcr.io/vedat-ozkan/cadence-finder/embedder
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres
+                  key: password
+            - name: DATABASE_URL
+              value: postgresql://postgres:$(POSTGRES_PASSWORD)@postgres:5432/postgres
+            - name: VOYAGE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: api-keys
+                  key: VOYAGE_API_KEY
+            - name: VOYAGE_MODEL
+              valueFrom:
+                configMapKeyRef:
+                  name: cadence-config
+                  key: VOYAGE_MODEL
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 2
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          resources:
+            requests:
+              cpu: 50m
+              memory: 192Mi
+            limits:
+              memory: 192Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: embedder
+spec:
+  selector:
+    app: embedder
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
