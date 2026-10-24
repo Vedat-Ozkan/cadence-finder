@@ -51,6 +51,16 @@ class SearchRequest(BaseModel):
     rerank: bool = False
 
 
+class Span(BaseModel):
+    movementId: str
+    firstBar: int
+    lastBar: int
+
+
+class CoveringRequest(BaseModel):
+    spans: list[Span] = Field(max_length=50)
+
+
 class Hit(BaseModel):
     passageId: str
     movementId: str
@@ -178,3 +188,30 @@ async def search(request: SearchRequest):
         )
         hits = [hits[item["index"]].model_copy(update={"score": item["relevance_score"]}) for item in body["data"]]
     return {"results": hits}
+
+
+@app.post("/covering")
+async def covering(request: CoveringRequest):
+    hits = {}
+    for span in request.spans:
+        row = await app.state.db.fetchrow(
+            """
+            SELECT id, movement_id, first_bar, last_bar, text
+            FROM passages
+            WHERE movement_id = $1 AND first_bar <= $3 AND last_bar >= $2
+            ORDER BY (first_bar <= $2 AND last_bar >= $3) DESC, last_bar - first_bar
+            LIMIT 1
+            """,
+            span.movementId,
+            span.firstBar,
+            span.lastBar,
+        )
+        if row is not None:
+            hits[row["id"]] = Hit(passageId=row["id"], movementId=row["movement_id"], firstBar=row["first_bar"],
+                                  lastBar=row["last_bar"], text=row["text"], score=1.0)
+    return {"results": list(hits.values())}
+
+
+@app.delete("/movements/{movement_id}/passages", status_code=204)
+async def delete_movement(movement_id: str):
+    await app.state.db.execute("DELETE FROM passages WHERE movement_id = $1", movement_id)

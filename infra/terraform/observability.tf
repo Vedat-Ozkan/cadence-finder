@@ -112,7 +112,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           region = var.region
           view   = "timeSeries"
           period = 60
-          metrics = [for route in ["/search", "/passages/{id}/similar", "/nl-search", "/reindex/{movementId}"] : [
+          metrics = [for route in ["/search", "/passages/{id}/similar", "/nl-search", "/ask", "/reindex/{movementId}"] : [
             "CadenceFinder", "http.server.request.duration", "service.name", "search-api", "http.route", route,
             { stat = "SampleCount", label = route }
           ]]
@@ -161,13 +161,14 @@ resource "aws_cloudwatch_dashboard" "main" {
         width  = 12
         height = 6
         properties = {
-          title  = "Embedder and worker latency p99 (s)"
+          title  = "Similar, nl-search and ask latency p99 (s)"
           region = var.region
           view   = "timeSeries"
           period = 300
           metrics = [
             ["CadenceFinder", "http.server.request.duration", "service.name", "search-api", "http.route", "/passages/{id}/similar", { stat = "p99", label = "similar (via embedder)" }],
             ["CadenceFinder", "http.server.request.duration", "service.name", "search-api", "http.route", "/nl-search", { stat = "p99", label = "nl-search (Claude)" }],
+            ["CadenceFinder", "http.server.request.duration", "service.name", "search-api", "http.route", "/ask", { stat = "p99", label = "ask (Claude)" }],
           ]
         }
       },

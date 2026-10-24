@@ -136,7 +136,7 @@ resource "aws_instance" "node" {
     #!/bin/bash
     set -uo pipefail
     [ "$(cut -d. -f1 /proc/uptime)" -lt 1800 ] && exit 0
-    requests="$(k3s kubectl -n kube-system logs deploy/traefik --since=30m 2>/dev/null | grep -cE '"(GET|POST) /(search|passages|nl-search)')"
+    requests="$(k3s kubectl -n kube-system logs deploy/traefik --since=30m 2>/dev/null | grep -cE '"(GET|POST) /(search|passages|nl-search|ask)')"
     [ "$${requests:-0}" -gt 0 ] && exit 0
     systemctl poweroff
     SCRIPT
