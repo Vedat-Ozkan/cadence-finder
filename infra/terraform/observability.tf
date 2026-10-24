@@ -78,6 +78,40 @@ resource "aws_cloudwatch_metric_alarm" "search_p99" {
   }
 }
 
+resource "aws_cloudwatch_metric_alarm" "ingest_stalled" {
+  count               = local.live
+  alarm_name          = "${local.name}-ingest-stalled"
+  alarm_description   = "Oldest message in ingest-${local.env} is older than 3 minutes. See docs/runbook.md#ingest-stalled."
+  namespace           = "AWS/SQS"
+  metric_name         = "ApproximateAgeOfOldestMessage"
+  dimensions          = { QueueName = aws_sqs_queue.ingest.name }
+  statistic           = "Maximum"
+  period              = 60
+  evaluation_periods  = 1
+  threshold           = 180
+  comparison_operator = "GreaterThanThreshold"
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [aws_sns_topic.alarms[0].arn]
+  ok_actions          = [aws_sns_topic.alarms[0].arn]
+}
+
+resource "aws_cloudwatch_metric_alarm" "search_api_5xx" {
+  count               = local.live
+  alarm_name          = "${local.name}-search-api-5xx"
+  alarm_description   = "search-api answered 500 more than 5 times in a minute. See docs/runbook.md#search-api-5xx."
+  namespace           = "CadenceFinder"
+  metric_name         = "http.server.request.duration"
+  dimensions          = { "service.name" = "search-api", "http.response.status_code" = "500" }
+  statistic           = "SampleCount"
+  period              = 60
+  evaluation_periods  = 1
+  threshold           = 5
+  comparison_operator = "GreaterThanThreshold"
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [aws_sns_topic.alarms[0].arn]
+  ok_actions          = [aws_sns_topic.alarms[0].arn]
+}
+
 resource "aws_cloudwatch_dashboard" "main" {
   count          = local.live
   dashboard_name = local.name
@@ -180,7 +214,7 @@ resource "aws_cloudwatch_dashboard" "main" {
         height = 6
         properties = {
           title  = "Alarms"
-          alarms = [aws_cloudwatch_metric_alarm.dlq[0].arn, aws_cloudwatch_metric_alarm.search_p99[0].arn]
+          alarms = [aws_cloudwatch_metric_alarm.dlq[0].arn, aws_cloudwatch_metric_alarm.search_p99[0].arn, aws_cloudwatch_metric_alarm.ingest_stalled[0].arn, aws_cloudwatch_metric_alarm.search_api_5xx[0].arn]
         }
       },
     ]

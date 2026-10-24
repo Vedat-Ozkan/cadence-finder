@@ -111,6 +111,11 @@ data:
             label_matchers:
               - label_names: [http.route]
                 regex: ^/(search|passages|nl-search|reindex|ask)
+          - dimensions: [[service.name, http.response.status_code]]
+            metric_name_selectors: [http.server.request.duration]
+            label_matchers:
+              - label_names: [http.response.status_code]
+                regex: ^5
       awscloudwatchlogs:
         region: ${env:AWS_REGION}
         log_group_name: /cadence-finder/${env:CADENCE_ENV}/app
