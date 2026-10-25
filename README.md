@@ -36,6 +36,7 @@ Search for chord progressions and cadences in three annotated corpora by Beethov
 | Retrieval, self-labelled hit rate@5 | `/nl-search` 1.00; text search 0.62–0.69, rerank 0.69–1.00 |
 | One trace across the API, SQS, worker and embedder | yes, a single X-Ray trace |
 | `/ask` (RAG with validated citations) | 8/8 grounded; 8/8 prompt-injection cases pass; p50 9 s |
+| In-cluster `/search`, after warm-up | one k3s node: 320 RPS at p99 152 ms; EKS with 2 nodes: 240 RPS at p99 19 ms |
 | Game day | stalled worker detected in 6.5 min, bad file in 9 min, Postgres kill self-healed with no failed requests |
 
 ## Layout
@@ -47,7 +48,7 @@ Search for chord progressions and cadences in three annotated corpora by Beethov
 | `ingest-worker/`, `search-api/` | Spring Boot 4.1 on Java 25 |
 | `embedder/` | FastAPI on Python 3.14, pgvector |
 | `wake/` | Lambda that wakes the node |
-| `deploy/k8s/` | Kustomize base plus `kind` and `k3s` overlays |
+| `deploy/k8s/` | Kustomize base plus `kind`, `k3s` and `eks` overlays |
 | `infra/terraform/` | Workspaces `dev` and `live` |
 | `e2e/` | docker compose with LocalStack; golden, NL, DLQ, reindex and recall tests |
 | `loadtest/` | k6 smoke test (in CI) and ramp |
