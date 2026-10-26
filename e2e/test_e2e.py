@@ -25,7 +25,7 @@ CORPUS_DIRS = {"abc": "abc", "bps": "beethoven_piano_sonatas", "mps": "mozart_pi
 GOLDEN = yaml.safe_load((HERE / "golden.yaml").read_text())
 NATURAL_LANGUAGE = yaml.safe_load((HERE / "nl.yaml").read_text())
 RUN_NL = os.environ.get("RUN_NL") == "1"
-SKIP_INGEST = os.environ.get("SKIP_INGEST") == "1"
+INGEST = bool(ENDPOINT) or os.environ.get("FULL_INGEST") == "1"
 
 
 def wait_for(condition, timeout, what):
@@ -83,7 +83,7 @@ def s3():
 @pytest.fixture(scope="session")
 def ingested(s3):
     wait_for(lambda: get("/search", {"q": "I"})[0] == 200, 120, "search-api")
-    if SKIP_INGEST:
+    if not INGEST:
         return
     files = [
         (corpus, path)
@@ -169,7 +169,7 @@ def test_natural_language(ingested, case):
         assert (expected["movement"], expected["bars"][0]) in starts, interpretation
 
 
-@pytest.mark.skipif(SKIP_INGEST, reason="needs a fresh ingest")
+@pytest.mark.skipif(not INGEST, reason="needs a fresh ingest")
 def test_malformed_file_lands_in_dead_letter_queue(ingested, s3):
     key = "raw/bps/99-9.harmonies.tsv"
     s3.put_object(Bucket=BUCKET, Key=key, Body=b"label\tchord\nV\tV\n")

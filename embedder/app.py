@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS passages (
     text text NOT NULL,
     embedding vector({DIMENSIONS}) NOT NULL
 );
+ALTER TABLE passages ADD COLUMN IF NOT EXISTS model text;
 CREATE INDEX IF NOT EXISTS passages_embedding ON passages USING hnsw (embedding vector_cosine_ops);
 """
 
@@ -125,16 +126,30 @@ async def health():
 @app.post("/passages", status_code=204)
 async def upsert(batch: PassageBatch):
     passages = batch.passages
-    vectors = await embed([p.text for p in passages], "document")
+    vectors = {
+        row["id"]: row["embedding"]
+        for row in await app.state.db.fetch(
+            """
+            SELECT id, embedding FROM passages JOIN unnest($1::text[], $2::text[]) AS new (id, text) USING (id)
+            WHERE passages.text = new.text AND model = $3
+            """,
+            [p.id for p in passages],
+            [p.text for p in passages],
+            VOYAGE_MODEL,
+        )
+    }
+    changed = [p for p in passages if p.id not in vectors]
+    vectors |= zip([p.id for p in changed], await embed([p.text for p in changed], "document"))
     async with app.state.db.acquire() as connection, connection.transaction():
         await connection.executemany(
             """
-            INSERT INTO passages (id, movement_id, first_bar, last_bar, text, embedding)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO passages (id, movement_id, first_bar, last_bar, text, embedding, model)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             ON CONFLICT (id) DO UPDATE SET movement_id = EXCLUDED.movement_id, first_bar = EXCLUDED.first_bar,
-                last_bar = EXCLUDED.last_bar, text = EXCLUDED.text, embedding = EXCLUDED.embedding
+                last_bar = EXCLUDED.last_bar, text = EXCLUDED.text, embedding = EXCLUDED.embedding,
+                model = EXCLUDED.model
             """,
-            [(p.id, p.movementId, p.firstBar, p.lastBar, p.text, v) for p, v in zip(passages, vectors)],
+            [(p.id, p.movementId, p.firstBar, p.lastBar, p.text, vectors[p.id], VOYAGE_MODEL) for p in passages],
         )
         await connection.execute(
             "DELETE FROM passages WHERE movement_id = ANY($1::text[]) AND NOT id = ANY($2::text[])",

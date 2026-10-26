@@ -65,3 +65,7 @@ uv run --project e2e pytest e2e -q
 ```
 
 `.env` needs `LOCALSTACK_AUTH_TOKEN` and `VOYAGE_API_KEY`. `ANTHROPIC_API_KEY` is only needed with `RUN_NL=1`.
+
+Against real AWS (`AWS_ENDPOINT=`), the suite reuses the data already there. `FULL_INGEST=1` uploads all 188 movements again, which costs about $0.30 in DynamoDB writes.
+
+The `kind` overlay runs the same LocalStack inside the cluster, so kind never touches AWS. It needs a `localstack` secret holding `LOCALSTACK_AUTH_TOKEN`, next to `api-keys` and `postgres`. LocalStack's data resets whenever its pod restarts, and the kind collector only logs to its own output.

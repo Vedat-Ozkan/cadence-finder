@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: localstack
+  namespace: cadence
+  labels:
+    app: localstack
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: localstack
+  template:
+    metadata:
+      labels:
+        app: localstack
+    spec:
+      containers:
+        - name: localstack
+          image: localstack/localstack:2026.10.2
+          ports:
+            - name: edge
+              containerPort: 4566
+          env:
+            - name: SERVICES
+              value: s3,sqs,dynamodb
+            - name: LOCALSTACK_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: localstack
+                  key: LOCALSTACK_AUTH_TOKEN
+          volumeMounts:
+            - name: init
+              mountPath: /etc/localstack/init/ready.d
+          readinessProbe:
+            exec:
+              command: ["bash", "-c", "awslocal dynamodb describe-table --table-name cadence-e2e > /dev/null"]
+            periodSeconds: 3
+            timeoutSeconds: 10
+      volumes:
+        - name: init
+          configMap:
+            name: localstack-init
+            defaultMode: 0755
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: localstack
+  namespace: cadence
+spec:
+  selector:
+    app: localstack
+  ports:
+    - name: edge
+      port: 4566
+      targetPort: edge

@@ -321,6 +321,16 @@ Each **⛔** step needs your explicit OK before it runs. These steps publish, cr
    4. Record time to detect (alarm) and time to recover, in `docs/results.md`.
 4. Optional: ⛔ EKS for one afternoon, with no NAT gateway, and tear it down the same day.
 
+### Cost cuts (2026-10-26)
+October's AWS spend was $5.76, all covered by credits. 80 % of it was DynamoDB writes from about 15 full ingests, 11 of them into `cadence-dev` through e2e runs on kind.
+- **kind uses LocalStack.** The kind overlay runs LocalStack in the cluster with the e2e names (`cadence-e2e`, `ingest-e2e`). Its collector exports only to `debug`. The `cadence-finder-dev-app` access key is no longer used by kind.
+- **e2e only ingests against LocalStack.** Against real AWS, set `FULL_INGEST=1` to upload the corpus.
+- **The embedder skips unchanged passages.** It reuses a stored vector when both the text and `VOYAGE_MODEL` match (column `model`), so re-ingesting an unchanged movement makes no Voyage call.
+- **Rerank stays at 20 candidates.** On compose, going from 20 to 10 halved rerank tokens but lowered hit rate: text + rerank fell from 0.75 to 0.69 and held-out similar + rerank from 1.00 to 0.75. Rerank had used only 0.6M tokens all month.
+- **Metrics are per environment** (`CadenceFinder/<env>`), and 10 % of traces are sampled.
+- **Metrics are exported as deltas.** The agents used cumulative temporality, and `awsemf` passed each running total on as that minute's value. One kind e2e run of 20 `/search` requests (18 × 200, 2 × 400) was therefore re-reported every minute for 29 hours. As a result, the live `search-p99` alarm fired and stayed in ALARM, and its p99 covered everything since the pod started rather than the last 5 minutes. `OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE=delta` fixes this; checked on kind, where 20 requests arrived as 9 + 11 in two consecutive minutes and were never reported again. The warm-up p99 described in docs/results.md was measured on cumulative data, so re-measure it after the next live deploy.
+- **Health probes are not traced.** Probe traces were about 30 a minute per environment. The collector's `filter/health` drops spans named `GET /actuator/health…` or `GET /healthz…`, including the embedder's `http send` child spans.
+
 ## Verification (applies to every weekend)
 - Run checks myself where possible, using a subagent for long Gradle and e2e output. Any check that can't run is reported as **NOT RUN**.
 - **End-to-end tests** (compose + LocalStack, golden queries, DLQ, NL set, injection set) are the main tests. No mocks of internal code. Unit tests only if a tokeniser edge case can't be reached from end to end.

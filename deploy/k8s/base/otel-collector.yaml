@@ -94,6 +94,11 @@ data:
         check_interval: 1s
         limit_mib: 150
       batch: {}
+      filter/health:
+        error_mode: ignore
+        traces:
+          span:
+            - IsMatch(name, "^GET /(actuator/health|healthz)")
     exporters:
       awsxray:
         region: ${env:AWS_REGION}
@@ -125,7 +130,7 @@ data:
       pipelines:
         traces:
           receivers: [otlp]
-          processors: [memory_limiter, batch]
+          processors: [memory_limiter, filter/health, batch]
           exporters: [awsxray]
         metrics:
           receivers: [otlp]

@@ -1,0 +1,31 @@
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+processors:
+  filter/health:
+    error_mode: ignore
+    traces:
+      span:
+        - IsMatch(name, "^GET /(actuator/health|healthz)")
+exporters:
+  debug: {}
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [filter/health]
+      exporters: [debug]
+    metrics:
+      receivers: [otlp]
+      exporters: [debug]
+    logs:
+      receivers: [otlp]
+      exporters: [debug]
