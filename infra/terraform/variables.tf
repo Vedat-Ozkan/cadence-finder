@@ -6,8 +6,9 @@ variable "region" {
 data "aws_caller_identity" "current" {}
 
 locals {
-  env  = terraform.workspace
-  name = "cadence-finder-${local.env}"
+  env               = terraform.workspace
+  name              = "cadence-finder-${local.env}"
+  metrics_namespace = "CadenceFinder/${local.env}"
 }
 
 variable "k3s_version" {

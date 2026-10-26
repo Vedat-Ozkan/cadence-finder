@@ -58,7 +58,7 @@ resource "aws_cloudwatch_metric_alarm" "search_p99" {
   metric_query {
     id = "p99"
     metric {
-      namespace   = "CadenceFinder"
+      namespace   = local.metrics_namespace
       metric_name = "http.server.request.duration"
       dimensions  = { "service.name" = "search-api", "http.route" = "/search" }
       stat        = "p99"
@@ -69,7 +69,7 @@ resource "aws_cloudwatch_metric_alarm" "search_p99" {
   metric_query {
     id = "requests"
     metric {
-      namespace   = "CadenceFinder"
+      namespace   = local.metrics_namespace
       metric_name = "http.server.request.duration"
       dimensions  = { "service.name" = "search-api", "http.route" = "/search" }
       stat        = "SampleCount"
@@ -99,7 +99,7 @@ resource "aws_cloudwatch_metric_alarm" "search_api_5xx" {
   count               = local.live
   alarm_name          = "${local.name}-search-api-5xx"
   alarm_description   = "search-api answered 500 more than 5 times in a minute. See docs/runbook.md#search-api-5xx."
-  namespace           = "CadenceFinder"
+  namespace           = local.metrics_namespace
   metric_name         = "http.server.request.duration"
   dimensions          = { "service.name" = "search-api", "http.response.status_code" = "500" }
   statistic           = "SampleCount"
@@ -129,7 +129,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           view   = "timeSeries"
           period = 60
           metrics = [for p in ["p50", "p95", "p99"] : [
-            "CadenceFinder", "http.server.request.duration", "service.name", "search-api", "http.route", "/search",
+            local.metrics_namespace, "http.server.request.duration", "service.name", "search-api", "http.route", "/search",
             { stat = p, label = p }
           ]]
           annotations = { horizontal = [{ value = 0.5, label = "p99 alarm" }] }
@@ -147,7 +147,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           view   = "timeSeries"
           period = 60
           metrics = [for route in ["/search", "/passages/{id}/similar", "/nl-search", "/ask", "/reindex/{movementId}"] : [
-            "CadenceFinder", "http.server.request.duration", "service.name", "search-api", "http.route", route,
+            local.metrics_namespace, "http.server.request.duration", "service.name", "search-api", "http.route", route,
             { stat = "SampleCount", label = route }
           ]]
         }
@@ -200,9 +200,9 @@ resource "aws_cloudwatch_dashboard" "main" {
           view   = "timeSeries"
           period = 300
           metrics = [
-            ["CadenceFinder", "http.server.request.duration", "service.name", "search-api", "http.route", "/passages/{id}/similar", { stat = "p99", label = "similar (via embedder)" }],
-            ["CadenceFinder", "http.server.request.duration", "service.name", "search-api", "http.route", "/nl-search", { stat = "p99", label = "nl-search (Claude)" }],
-            ["CadenceFinder", "http.server.request.duration", "service.name", "search-api", "http.route", "/ask", { stat = "p99", label = "ask (Claude)" }],
+            [local.metrics_namespace, "http.server.request.duration", "service.name", "search-api", "http.route", "/passages/{id}/similar", { stat = "p99", label = "similar (via embedder)" }],
+            [local.metrics_namespace, "http.server.request.duration", "service.name", "search-api", "http.route", "/nl-search", { stat = "p99", label = "nl-search (Claude)" }],
+            [local.metrics_namespace, "http.server.request.duration", "service.name", "search-api", "http.route", "/ask", { stat = "p99", label = "ask (Claude)" }],
           ]
         }
       },

@@ -258,7 +258,7 @@ Each **⛔** step needs your explicit OK before it runs. These steps publish, cr
 4. Install the OTel agent and instrumentation, the ADOT collector, the dashboard and two alarms. ⛔ The SNS email subscription. **Done 2026-10-24, except the email subscription:**
    - **Java:** the ADOT Java agent 2.32.0, fetched from Maven Central by sha256 (public ECR rate-limited the GitHub runners). It is enabled only in Kubernetes, through `JAVA_TOOL_OPTIONS`, so compose and CI run without it.
    - **Python:** ADOT Python 0.21.0 through `opentelemetry-instrument` (FastAPI, httpx, asyncpg).
-   - **Collector:** ADOT collector v0.50.0 in the cluster, sending traces to X-Ray (`awsxray`), metrics to EMF (`awsemf`, namespace `CadenceFinder`) and logs to `/cadence-finder/<env>/app`.
+   - **Collector:** ADOT collector v0.50.0 in the cluster, sending traces to X-Ray (`awsxray`), metrics to EMF (`awsemf`, namespace `CadenceFinder/<env>`, so dev traffic never reaches the live alarms) and logs to `/cadence-finder/<env>/app`.
      - EMF keeps only `http.server.request.duration` with dimensions `service.name` and `http.route`, for API routes only.
      - The agents export exponential histograms, so CloudWatch can compute percentiles. With explicit buckets EMF only had min, max, sum and count.
    - **Memory after the agents:** limits are worker 640Mi, search-api 576Mi, embedder 256Mi and collector 192Mi. Measured use is worker about 336Mi, search-api about 300–375Mi, embedder about 85Mi and collector about 50Mi.

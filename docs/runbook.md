@@ -7,9 +7,9 @@ Live environment: one t4g.medium running k3s in us-east-1, namespace `cadence`.
 | App | https://cadence-finder.duckdns.org (`/search`, `/passages/{id}/similar`, `/nl-search`, `/ask`; the last two are rate-limited to 5 a minute per IP) |
 | Public link that wakes the node | `terraform -chdir=infra/terraform output -raw wake_url` (workspace `live`) |
 | Dashboard | CloudWatch → Dashboards → `cadence-finder-live` |
-| Traces | CloudWatch → X-Ray traces → Trace map; filter `service("search-api")` |
+| Traces | CloudWatch → X-Ray traces → Trace map; filter `service("search-api")`. Only 10 % of requests and ingest messages are traced (`OTEL_TRACES_SAMPLER_ARG`) |
 | App logs | Log group `/cadence-finder/live/app` (7 days) |
-| Metrics (EMF) | Namespace `CadenceFinder`, log group `/cadence-finder/live/metrics` |
+| Metrics (EMF) | Namespace `CadenceFinder/live`, log group `/cadence-finder/live/metrics` |
 | Alarms | `cadence-finder-live-dlq-not-empty`, `-search-p99`, `-ingest-stalled`, `-search-api-5xx`, all to SNS topic `cadence-finder-live-alarms` |
 | Secrets | SSM Parameter Store `/cadence/live/*` (SecureString) |
 

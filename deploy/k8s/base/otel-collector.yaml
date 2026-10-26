@@ -99,7 +99,7 @@ data:
         region: ${env:AWS_REGION}
       awsemf:
         region: ${env:AWS_REGION}
-        namespace: CadenceFinder
+        namespace: CadenceFinder/${env:CADENCE_ENV}
         log_group_name: /cadence-finder/${env:CADENCE_ENV}/metrics
         log_stream_name: emf
         dimension_rollup_option: NoDimensionRollup
