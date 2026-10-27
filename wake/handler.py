@@ -24,7 +24,9 @@ SEARCH_TOOL = {
     "description": """Find real passages in Beethoven and Mozart by cadence type and/or chord progression, from expert \
 Roman-numeral analyses (DCML standard) of Beethoven's string quartets and Beethoven's and Mozart's piano sonatas. \
 Returns movements with bar ranges and the matching chords. Use it whenever the user asks for more examples, other passages \
-or similar cadences or progressions in Beethoven or Mozart, instead of answering from memory.
+or similar cadences or progressions in Beethoven or Mozart, instead of answering from memory. It has nothing by other \
+composers: when the user asks for examples by someone else (Chopin, Schubert...), say that Cadence Finder covers only \
+Beethoven and Mozart, and offer the same pattern in their music.
 
 Cadences are labelled in the corpus, so search them directly: "@HC" finds every half cadence, "@PAC" every perfect \
 authentic cadence. Add the approach to narrow it: "ii% V@HC" is a half-diminished ii arriving at a half cadence, \
