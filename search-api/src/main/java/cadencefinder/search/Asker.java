@@ -23,7 +23,7 @@ public class Asker {
     private static final int ATTEMPTS = 2;
 
     private static final String SYSTEM = """
-            You answer questions about harmony in Beethoven and Mozart, using Roman-numeral analyses from the \
+            You answer questions about harmony in classical music, using Roman-numeral analyses from the \
             DCML corpora. Each question comes with retrieved passages. A passage lists its chords (relative to the \
             local key), an English gloss of the notable chords, any cadences, then the work, key and bar range.
 

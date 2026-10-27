@@ -1,5 +1,6 @@
-Cadence Finder indexes harmonic annotations from three corpora published by the
-Digital and Cognitive Musicology Lab (DCML), EPFL. Each corpus is licensed under
+Cadence Finder indexes harmonic annotations from the 40 corpora of the Distant
+Listening Corpus, published by the Digital and Cognitive Musicology Lab (DCML),
+EPFL. Each corpus is licensed under
 Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International
 (CC BY-NC-SA 4.0): https://creativecommons.org/licenses/by-nc-sa/4.0/
 
@@ -20,3 +21,11 @@ shared under the same licence. The corpora are not redistributed in this reposit
    Hentschel, J., Neuwirth, M., Rohrmeier, M.
    https://github.com/DCMLab/mozart_piano_sonatas  DOI: 10.5281/zenodo.7424962
    Data report: https://doi.org/10.5334/tismir.63
+
+The other 37 corpora are part of the Distant Listening Corpus, cited as a whole:
+
+   The Distant Listening Corpus (A corpus of annotated scores).
+   Hentschel, J., Rammos, Y., Neuwirth, M., Rohrmeier, M.
+   https://github.com/DCMLab/distant_listening_corpus  DOI: 10.5281/zenodo.13844105
+   Data report: https://doi.org/10.1038/s41597-025-04976-z
+   The list of corpora, with their pinned commits, is in scripts/fetch-corpus.sh.

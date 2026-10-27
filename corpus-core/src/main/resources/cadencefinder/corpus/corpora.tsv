@@ -1,0 +1,40 @@
+abc	abc	Ludwig van Beethoven	Beethoven string quartets	false
+bach_en_fr_suites	bach_en_fr_suites	Johann Sebastian Bach	Bach, English and French Suites	true
+bach_solo	bach_solo	Johann Sebastian Bach	Bach, solo violin, cello and flute works	true
+bartok_bagatelles	bartok_bagatelles	Béla Bartók	Bartók, 14 Bagatelles, Op. 6	true
+bps	beethoven_piano_sonatas	Ludwig van Beethoven	Beethoven piano sonatas	true
+c_schumann_lieder	c_schumann_lieder	Clara Schumann	Clara Schumann, songs	true
+chopin_mazurkas	chopin_mazurkas	Frédéric Chopin	Chopin, mazurkas	true
+corelli	corelli	Arcangelo Corelli	Corelli, trio sonatas, Opp. 1, 3 and 4	true
+couperin_clavecin	couperin_clavecin	François Couperin	François Couperin, L'Art de toucher le clavecin	true
+couperin_concerts	couperin_concerts	François Couperin	François Couperin, Concerts royaux, Nouveaux concerts and Le Parnasse	true
+cpe_bach_keyboard	cpe_bach_keyboard	Carl Philipp Emanuel Bach	C. P. E. Bach, keyboard sonatas and fantasias	true
+debussy_suite_bergamasque	debussy_suite_bergamasque	Claude Debussy	Debussy, Suite bergamasque	true
+dvorak_silhouettes	dvorak_silhouettes	Antonín Dvořák	Dvořák, Silhouettes, Op. 8	true
+frescobaldi_fiori_musicali	frescobaldi_fiori_musicali	Girolamo Frescobaldi	Frescobaldi, Fiori musicali	false
+grieg_lyric_pieces	grieg_lyric_pieces	Edvard Grieg	Grieg, Lyric Pieces	true
+handel_keyboard	handel_keyboard	Georg Friedrich Händel	Handel, The Harmonious Blacksmith	true
+jc_bach_sonatas	jc_bach_sonatas	Johann Christian Bach	J. C. Bach, keyboard sonatas	true
+kleine_geistliche_konzerte	kleine_geistliche_konzerte	Heinrich Schütz	Schütz, Kleine geistliche Konzerte	false
+kozeluh_sonatas	kozeluh_sonatas	Leopold Koželuch	Koželuch, keyboard sonatas	false
+liszt_pelerinage	liszt_pelerinage	Franz Liszt	Liszt, Années de pèlerinage	true
+mahler_kindertotenlieder	mahler_kindertotenlieder	Gustav Mahler	Mahler, Kindertotenlieder	true
+medtner_tales	medtner_tales	Nikolai Medtner	Medtner, Tales	true
+mendelssohn_quartets	mendelssohn_quartets	Felix Mendelssohn	Mendelssohn, string quartets	false
+monteverdi_madrigals	monteverdi_madrigals	Claudio Monteverdi	Monteverdi, madrigals and psalms	false
+mps	mozart_piano_sonatas	Wolfgang Amadeus Mozart	Mozart piano sonatas	true
+pergolesi_stabat_mater	pergolesi_stabat_mater	Giovanni Battista Pergolesi	Pergolesi, Stabat Mater	false
+peri_euridice	peri_euridice	Jacopo Peri	Peri, Euridice	true
+pleyel_quartets	pleyel_quartets	Ignaz Pleyel	Pleyel, string quartets	true
+poulenc_mouvements_perpetuels	poulenc_mouvements_perpetuels	Francis Poulenc	Poulenc, Trois mouvements perpétuels	true
+rachmaninoff_piano	rachmaninoff_piano	Sergei Rachmaninoff	Rachmaninoff, Variations on a Theme of Corelli	true
+ravel_piano	ravel_piano	Maurice Ravel	Ravel, Jeux d'eau and Miroirs	false
+scarlatti_sonatas	scarlatti_sonatas	Domenico Scarlatti	Domenico Scarlatti, keyboard sonatas	true
+schubert_winterreise	schubert_winterreise	Franz Schubert	Schubert, Winterreise	false
+schulhoff_suite_dansante_en_jazz	schulhoff_suite_dansante_en_jazz	Erwin Schulhoff	Schulhoff, Suite dansante en jazz	true
+schumann_kinderszenen	schumann_kinderszenen	Robert Schumann	Robert Schumann, Kinderszenen	true
+schumann_liederkreis	schumann_liederkreis	Robert Schumann	Robert Schumann, Liederkreis, Op. 39	false
+sweelinck_keyboard	sweelinck_keyboard	Jan Pieterszoon Sweelinck	Sweelinck, Fantasia cromatica	false
+tchaikovsky_seasons	tchaikovsky_seasons	Pyotr Ilyich Tchaikovsky	Tchaikovsky, The Seasons	true
+wagner_overtures	wagner_overtures	Richard Wagner	Wagner, preludes to Tristan und Isolde and Die Meistersinger	false
+wf_bach_sonatas	wf_bach_sonatas	Wilhelm Friedemann Bach	W. F. Bach, keyboard sonatas	true

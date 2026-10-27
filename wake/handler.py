@@ -3,6 +3,7 @@ import json
 import os
 import urllib.request
 from datetime import datetime, timezone
+from pathlib import Path
 
 import boto3
 
@@ -14,19 +15,21 @@ SEARCH_FUNCTION = os.environ["SEARCH_FUNCTION"]
 DEFAULT_PATH = "/search?q=Ger+...+%40PAC&corpus=bps"
 EXPECTED_SECONDS = 90
 PROTOCOL_VERSIONS = ["2025-11-25", "2025-06-18", "2025-03-26"]
-ATTRIBUTION = ("Data: DCML corpora (Annotated Beethoven Corpus; Beethoven Piano Sonatas; Annotated Mozart Sonatas), "
-               "CC BY-NC-SA 4.0, https://github.com/DCMLab")
-INSTRUCTIONS = ("Cadence Finder finds real passages in Beethoven and Mozart (piano sonatas, Beethoven string quartets) "
-                "by cadence type (searchable directly, e.g. @HC) and chord progression. When the user wants more examples of a progression or cadence, "
-                "for instance one found in a harmonic analysis of their score, call search rather than listing examples from memory.")
+CORPORA = [line.rstrip("\n").split("\t") for line in open(Path(__file__).with_name("corpora.tsv"), encoding="utf-8")]
+COMPOSERS = ", ".join(sorted({row[2] for row in CORPORA}, key=lambda name: name.split()[-1]))
+ATTRIBUTION = "Data: DCML Distant Listening Corpus, CC BY-NC-SA 4.0, https://github.com/DCMLab/distant_listening_corpus"
+INSTRUCTIONS = (f"Cadence Finder finds real passages in classical music by cadence type (searchable directly, e.g. @HC) "
+                f"and chord progression, in {len(CORPORA)} collections by {COMPOSERS}. When the user wants more examples "
+                "of a progression or cadence, for instance one found in a harmonic analysis of their score, call search "
+                "rather than listing examples from memory.")
 SEARCH_TOOL = {
     "name": "search",
-    "description": """Find real passages in Beethoven and Mozart by cadence type and/or chord progression, from expert \
-Roman-numeral analyses (DCML standard) of Beethoven's string quartets and Beethoven's and Mozart's piano sonatas. \
-Returns movements with bar ranges and the matching chords. Use it whenever the user asks for more examples, other passages \
-or similar cadences or progressions in Beethoven or Mozart, instead of answering from memory. It has nothing by other \
-composers: when the user asks for examples by someone else (Chopin, Schubert...), say that Cadence Finder covers only \
-Beethoven and Mozart, and offer the same pattern in their music.
+    "description": f"""Find real passages by cadence type and/or chord progression, from expert Roman-numeral analyses \
+(DCML standard) in {len(CORPORA)} collections by {COMPOSERS}. Returns movements with bar ranges and the matching chords. \
+Use it whenever the user asks for more examples, other passages or similar cadences or progressions by these composers, \
+instead of answering from memory. Each collection covers only the works named in the corpus list. When the user asks \
+for a composer or work that isn't there, say so, and offer the same pattern elsewhere. Some collections have no cadence \
+labels: say that cadence searches can't run there, and search the chords instead.
 
 Cadences are labelled in the corpus, so search them directly: "@HC" finds every half cadence, "@PAC" every perfect \
 authentic cadence. Add the approach to narrow it: "ii% V@HC" is a half-diminished ii arriving at a half cadence, \
@@ -57,9 +60,9 @@ leading-tone chords with a sharp: search "#viio7", not "viio7".""",
         "type": "object",
         "properties": {
             "query": {"type": "string", "description": "The progression in the query grammar"},
-            "corpus": {"type": "string", "enum": ["abc", "bps", "mps"],
-                       "description": "abc: Beethoven string quartets (no cadence labels, so never with a cadence); "
-                                      "bps: Beethoven piano sonatas; mps: Mozart piano sonatas. Omit for all."},
+            "corpus": {"type": "string", "enum": [row[0] for row in CORPORA],
+                       "description": "Omit to search every collection. " + "; ".join(
+                           f"{row[0]}: {row[3]}" + ("" if row[4] == "true" else " (no cadence labels)") for row in CORPORA)},
             "limit": {"type": "integer", "minimum": 1, "maximum": 200, "description": "Results per page (default 50)"},
             "cursor": {"type": "string", "description": "nextCursor from a previous result, for the next page"},
         },

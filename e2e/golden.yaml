@@ -149,3 +149,34 @@
   corpus: bps
   status: 200
   count: 11
+
+- name: half cadences in the Chopin mazurkas
+  query: "@HC"
+  corpus: chopin_mazurkas
+  status: 200
+  count: 64
+  includes:
+    - movement: chopin_mazurkas:BI105-4op30-4
+      bars: [31, 32]
+
+- name: German sixth written Ger65 in a newer corpus matches Ger6
+  query: Ger6 V
+  corpus: rachmaninoff_piano
+  status: 200
+  count: 1
+  includes:
+    - movement: rachmaninoff_piano:op42_17
+      bars: [10, 11]
+
+- name: Italian sixth to the dominant in Winterreise
+  query: It6 V
+  corpus: schubert_winterreise
+  status: 200
+  includes:
+    - movement: schubert_winterreise:n03
+      bars: [22, 23]
+
+- name: cadence search in a corpus without cadence labels
+  query: "@HC"
+  corpus: schubert_winterreise
+  status: 400

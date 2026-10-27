@@ -1,64 +1,56 @@
 package cadencefinder.corpus;
 
-import java.util.Arrays;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
-public enum Corpus {
-    ABC("abc", "Beethoven", "abc", false, Pattern.compile("n(\\d+)op(\\d+)(?:-(\\d+))?_(\\d+)")),
-    BPS("bps", "Beethoven", "beethoven_piano_sonatas", true, Pattern.compile("(\\d+)-(\\d+)")),
-    MPS("mps", "Mozart", "mozart_piano_sonatas", true, Pattern.compile("K(\\d+)-(\\d+)"));
+public record Corpus(String id, String directory, String composer, String name, boolean hasCadences) {
 
-    private final String id;
-    private final String composer;
-    private final String directory;
-    private final boolean hasCadences;
-    private final Pattern stem;
+    private static final Map<String, Corpus> CORPORA = rows("corpora.tsv").stream()
+            .map(row -> new Corpus(row[0], row[1], row[2], row[3], Boolean.parseBoolean(row[4])))
+            .collect(Collectors.toMap(Corpus::id, Function.identity(), (a, b) -> a, LinkedHashMap::new));
+    private static final Map<String, String> TITLES = rows("titles.tsv").stream()
+            .collect(Collectors.toMap(row -> row[0] + ":" + row[1], row -> row[2]));
 
-    Corpus(String id, String composer, String directory, boolean hasCadences, Pattern stem) {
-        this.id = id;
-        this.composer = composer;
-        this.directory = directory;
-        this.hasCadences = hasCadences;
-        this.stem = stem;
+    public static List<Corpus> values() {
+        return List.copyOf(CORPORA.values());
     }
 
-    public String id() {
-        return id;
-    }
-
-    public String composer() {
-        return composer;
-    }
-
-    public String directory() {
-        return directory;
-    }
-
-    public boolean hasCadences() {
-        return hasCadences;
+    public static String catalogue() {
+        return CORPORA.values().stream()
+                .map(corpus -> "- " + corpus.id + ": " + corpus.name + (corpus.hasCadences ? "" : " (no cadence labels)"))
+                .collect(Collectors.joining("\n"));
     }
 
     public static Corpus byId(String id) {
-        return Arrays.stream(values())
-                .filter(corpus -> corpus.id.equals(id))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("unknown corpus " + id));
+        Corpus corpus = CORPORA.get(id);
+        if (corpus == null) {
+            throw new IllegalArgumentException("unknown corpus " + id);
+        }
+        return corpus;
     }
 
     public String title(String fileStem) {
-        Matcher m = stem.matcher(fileStem);
-        if (!m.matches()) {
+        String title = TITLES.get(id + ":" + fileStem);
+        if (title == null) {
             throw new IllegalArgumentException(id + ": unexpected file name " + fileStem);
         }
-        return switch (this) {
-            case ABC -> "String Quartet No. %d, Op. %s%s, mvt %d".formatted(
-                    Integer.parseInt(m.group(1)),
-                    m.group(2),
-                    m.group(3) == null ? "" : " No. " + m.group(3),
-                    Integer.parseInt(m.group(4)));
-            case BPS -> "Piano Sonata No. %d, mvt %d".formatted(Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2)));
-            case MPS -> "Piano Sonata K. %s, mvt %d".formatted(m.group(1), Integer.parseInt(m.group(2)));
-        };
+        return title;
+    }
+
+    private static List<String[]> rows(String resource) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+                Corpus.class.getResourceAsStream(resource), StandardCharsets.UTF_8))) {
+            return reader.lines().map(line -> line.split("\t", -1)).toList();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 }

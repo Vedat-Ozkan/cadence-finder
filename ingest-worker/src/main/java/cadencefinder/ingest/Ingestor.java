@@ -22,7 +22,7 @@ import tools.jackson.databind.json.JsonMapper;
 public class Ingestor {
 
     private static final Logger log = LoggerFactory.getLogger(Ingestor.class);
-    private static final Pattern RAW_KEY = Pattern.compile("raw/([a-z]+)/(.+)\\.harmonies\\.tsv");
+    private static final Pattern RAW_KEY = Pattern.compile("raw/([a-z_]+)/(.+)\\.harmonies\\.tsv");
 
     private final S3Client s3;
     private final CadenceTable table;

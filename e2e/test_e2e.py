@@ -21,7 +21,7 @@ AWS = {"region_name": "us-east-1"} | (
 BUCKET = os.environ.get("CADENCE_BUCKET", "cadence-e2e")
 DLQ = os.environ.get("CADENCE_DLQ", "ingest-e2e-dlq")
 DLQ_TIMEOUT = int(os.environ.get("DLQ_TIMEOUT", "180"))
-CORPUS_DIRS = {"abc": "abc", "bps": "beethoven_piano_sonatas", "mps": "mozart_piano_sonatas"}
+CORPUS_DIRS = dict(line.split("\t")[:2] for line in (HERE.parent / "wake/corpora.tsv").read_text(encoding="utf-8").splitlines())
 GOLDEN = yaml.safe_load((HERE / "golden.yaml").read_text())
 NATURAL_LANGUAGE = yaml.safe_load((HERE / "nl.yaml").read_text())
 RUN_NL = os.environ.get("RUN_NL") == "1"
@@ -90,7 +90,7 @@ def ingested(s3):
         for corpus, directory in CORPUS_DIRS.items()
         for path in sorted((CORPUS / directory / "harmonies").glob("*.harmonies.tsv"))
     ]
-    assert len(files) == 188, f"expected 188 movement files under {CORPUS}, found {len(files)}"
+    assert len(files) == 1284, f"expected 1284 movement files under {CORPUS}, found {len(files)}"
     started = datetime.now(timezone.utc) - timedelta(seconds=5)
     for corpus, path in files:
         s3.upload_file(str(path), BUCKET, f"raw/{corpus}/{path.name}")
@@ -100,7 +100,7 @@ def ingested(s3):
         fresh = [o for page in pages for o in page.get("Contents", []) if o["LastModified"] >= started]
         return len(fresh) == len(files)
 
-    wait_for(passages_written, 900, "all movements to be ingested")
+    wait_for(passages_written, 1800, "all movements to be ingested")
 
 
 def has_hit(hits, movement, bars):

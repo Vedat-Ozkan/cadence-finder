@@ -1,7 +1,16 @@
 data "archive_file" "wake" {
   type        = "zip"
-  source_file = "${path.module}/../../wake/handler.py"
   output_path = "${path.module}/build/wake.zip"
+
+  source {
+    content  = file("${path.module}/../../wake/handler.py")
+    filename = "handler.py"
+  }
+
+  source {
+    content  = file("${path.module}/../../wake/corpora.tsv")
+    filename = "corpora.tsv"
+  }
 }
 
 resource "aws_iam_role" "wake" {

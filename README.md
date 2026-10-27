@@ -1,6 +1,6 @@
 # Cadence Finder
 
-Search for chord progressions and cadences in three annotated corpora by Beethoven and Mozart (DCML, CC BY-NC-SA 4.0; see [NOTICE](NOTICE)).
+Search for chord progressions and cadences in the 40 annotated corpora of DCML's Distant Listening Corpus: 1,284 movements by 36 composers, from Monteverdi to Poulenc (CC BY-NC-SA 4.0; see [NOTICE](NOTICE)).
 - Structured queries like `Ger ... @PAC` ("a German sixth leading, within four chords, to a perfect authentic cadence").
 - Similar-passage search over embeddings.
 - Plain-English questions, turned into validated structured queries by Claude.
@@ -56,6 +56,7 @@ Search for chord progressions and cadences in three annotated corpora by Beethov
 | `infra/terraform/` | Workspaces `dev` and `live` |
 | `e2e/` | docker compose with LocalStack; golden, NL, DLQ, reindex and recall tests |
 | `loadtest/` | k6 smoke test (in CI) and ramp |
+| `scripts/` | `fetch-corpus.sh` pins every DCML corpus; `corpus-metadata.py` writes the corpus list and movement titles (`corpus-core` resources, `wake/corpora.tsv`) from the fetched corpus and DCML's metadata |
 | `docs/` | [build plan](docs/build-plan.md), [runbook](docs/runbook.md), [results](docs/results.md) |
 
 ## Running the tests locally
@@ -70,6 +71,6 @@ uv run --project e2e pytest e2e -q
 
 `.env` needs `LOCALSTACK_AUTH_TOKEN` and `VOYAGE_API_KEY`. `ANTHROPIC_API_KEY` is only needed with `RUN_NL=1`.
 
-Against real AWS (`AWS_ENDPOINT=`), the suite reuses the data already there. `FULL_INGEST=1` uploads all 188 movements again, which costs about $0.30 in DynamoDB writes.
+Against real AWS (`AWS_ENDPOINT=`), the suite reuses the data already there. `FULL_INGEST=1` uploads all 1,284 movements again, which costs about $1–2 in DynamoDB writes.
 
 The `kind` overlay runs the same LocalStack inside the cluster, so kind never touches AWS. It needs a `localstack` secret holding `LOCALSTACK_AUTH_TOKEN`, next to `api-keys` and `postgres`. LocalStack's data resets whenever its pod restarts, and the kind collector only logs to its own output.

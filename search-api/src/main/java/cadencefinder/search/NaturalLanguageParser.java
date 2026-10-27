@@ -1,5 +1,6 @@
 package cadencefinder.search;
 
+import cadencefinder.corpus.Corpus;
 import com.anthropic.client.AnthropicClient;
 import com.anthropic.core.JsonValue;
 import com.anthropic.models.messages.MessageCreateParams;
@@ -39,20 +40,21 @@ public class NaturalLanguageParser {
             To match a seventh chord in any inversion, omit the figure: V matches V7 and V65, ii% matches ii%7 and ii%65.
             - A minor-key tonic is i. When a cadence's arrival chord is not stated, use the bare cadence step (@PAC).
 
-            Corpora (use the id, or "" for all):
-            - abc: Beethoven string quartets. Has no cadence labels, so never combine abc with a cadence.
-            - bps: Beethoven piano sonatas. mps: Mozart piano sonatas. Both have cadence labels.
+            Corpora (use the id, or "" for all). Never combine a cadence with a corpus that has no cadence labels. \
+            When the request names a composer or work, use its corpus:
+            """ + Corpus.catalogue() + """
 
             Examples:
             - "German sixth before a perfect authentic cadence in Beethoven sonatas" -> query "Ger ... @PAC", corpus "bps"
             - "Italian sixth going straight to the dominant in Mozart" -> query "It V", corpus "mps"
             - "deceptive cadences after a dominant seventh" -> query "V7 vi@DC", corpus ""
+            - "half cadences in Chopin's mazurkas" -> query "@HC", corpus "chopin_mazurkas"
 
             If the request cannot be expressed in this grammar, return an empty query and explain why in note.""";
 
     public record ParsedQuery(
             @JsonPropertyDescription("The query in the grammar, or empty if the request cannot be expressed") String query,
-            @JsonPropertyDescription("Corpus id: abc, bps, mps, or empty for all corpora") String corpus,
+            @JsonPropertyDescription("Corpus id from the list, or empty for all corpora") String corpus,
             @JsonPropertyDescription("One sentence: how the request was interpreted, or why it cannot be expressed") String note) {
     }
 

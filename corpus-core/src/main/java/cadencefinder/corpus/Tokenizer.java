@@ -41,7 +41,7 @@ public final class Tokenizer {
     static String chordText(Harmony harmony, Level level) {
         if (harmony.isAugmentedSixth()) {
             String chord = CHANGES.matcher(harmony.chord()).replaceAll("");
-            return level == Level.L1 ? chord : harmony.chordType() + appliedPart(chord);
+            return level == Level.L1 ? Query.corpusSpelling(chord) : harmony.chordType() + appliedPart(chord);
         }
         String applied = harmony.relativeroot().isEmpty() ? "" : "/" + harmony.relativeroot();
         String figbass = level == Level.L1 ? harmony.figbass() : "";
