@@ -1,5 +1,8 @@
+import base64
 import json
 import os
+import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
@@ -10,6 +13,56 @@ INSTANCE = os.environ["INSTANCE_ID"]
 APP = os.environ["APP_URL"]
 DEFAULT_PATH = "/search?q=Ger+...+%40PAC&corpus=bps"
 EXPECTED_SECONDS = 90
+PROTOCOL_VERSIONS = ["2025-11-25", "2025-06-18", "2025-03-26"]
+ATTRIBUTION = ("Data: DCML corpora (Annotated Beethoven Corpus; Beethoven Piano Sonatas; Annotated Mozart Sonatas), "
+               "CC BY-NC-SA 4.0, https://github.com/DCMLab")
+INSTRUCTIONS = ("Cadence Finder finds real passages in Beethoven and Mozart (piano sonatas, Beethoven string quartets) "
+                "by cadence type (searchable directly, e.g. @HC) and chord progression. When the user wants more examples of a progression or cadence, "
+                "for instance one found in a harmonic analysis of their score, call search rather than listing examples from memory.")
+SEARCH_TOOL = {
+    "name": "search",
+    "description": """Find real passages in Beethoven and Mozart by cadence type and/or chord progression, from expert \
+Roman-numeral analyses (DCML standard) of Beethoven's string quartets and Beethoven's and Mozart's piano sonatas. \
+Returns movements with bar ranges and the matching chords. Use it whenever the user asks for more examples, other passages \
+or similar cadences or progressions in Beethoven or Mozart, instead of answering from memory.
+
+Cadences are labelled in the corpus, so search them directly: "@HC" finds every half cadence, "@PAC" every perfect \
+authentic cadence. Add the approach to narrow it: "ii% V@HC" is a half-diminished ii arriving at a half cadence, \
+"Ger ... @PAC" a German sixth leading to a perfect authentic cadence. To find cadences like one in the user's score, \
+use its cadence label (PAC, IAC, HC, DC) with the chords before it, without inversion figures: a figure makes every \
+chord match exactly as written and often finds nothing. If a narrow search is empty, widen it (drop figures, use " ... ", \
+or search the cadence alone).
+
+Query grammar:
+- Steps are separated by a single space (the next chord follows immediately) or by " ... " (zero to four other chords may come in between).
+- A step is a chord, a chord with a cadence (V@HC), or a cadence alone (@PAC = any chord carrying that cadence).
+- Cadences: PAC (perfect authentic), IAC (imperfect authentic), HC (half), DC (deceptive), EC (evaded), PC (plagal).
+- Chords are relative to the local key. Upper case is major, lower case is minor: I, i, ii, IV, V, vi, bII, #iv. \
+Qualities: o (diminished), % (half-diminished), + (augmented), M (major seventh), e.g. viio7, ii%7.
+- Inversion figures: 6, 64 (triads), 7, 65, 43, 2 (sevenths), e.g. V65, ii6, I6.
+- Applied chords use a slash: V/V, V65/V, viio7/ii.
+- Augmented sixths are Ger, It, Fr, optionally with a figure: Ger6, It6, Fr6, Ger43.
+- The cadential six-four is written V, not I64: write "V V7 I@PAC", never "I64 V".
+- If any chord has an inversion figure, every chord must match exactly as written (V means root position). \
+If no chord has a figure, inversions are ignored (V matches V, V6, V65, V7...). Prefer the figure-free form.
+- A minor-key tonic is i.
+
+More examples: "It V" in mps; "V7 vi@DC" in all corpora; "@HC" in bps.
+
+If the server is asleep, the result says it is starting; tell the user and call again after about 90 seconds.""",
+    "inputSchema": {
+        "type": "object",
+        "properties": {
+            "query": {"type": "string", "description": "The progression in the query grammar"},
+            "corpus": {"type": "string", "enum": ["abc", "bps", "mps"],
+                       "description": "abc: Beethoven string quartets (no cadence labels, so never with a cadence); "
+                                      "bps: Beethoven piano sonatas; mps: Mozart piano sonatas. Omit for all."},
+            "limit": {"type": "integer", "minimum": 1, "maximum": 200, "description": "Results per page (default 50)"},
+            "cursor": {"type": "string", "description": "nextCursor from a previous result, for the next page"},
+        },
+        "required": ["query"],
+    },
+}
 PAGE = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -77,7 +130,7 @@ def app_ready():
         return False
 
 
-def handler(event, context):
+def wake():
     instance = ec2.describe_instances(InstanceIds=[INSTANCE])["Reservations"][0]["Instances"][0]
     state = instance["State"]["Name"]
     elapsed = 0
@@ -86,8 +139,63 @@ def handler(event, context):
         state = "pending"
     elif state in ("pending", "running"):
         elapsed = int((datetime.now(timezone.utc) - instance["LaunchTime"]).total_seconds())
-    ready = state == "running" and app_ready()
+    return state, state == "running" and app_ready(), elapsed
+
+
+def search(arguments):
+    state, ready, elapsed = wake()
+    if not ready:
+        return f"Cadence Finder is starting (server {state}, {elapsed} s so far; it usually takes about {EXPECTED_SECONDS} s). Ask again in about a minute and a half.", False
+    params = {"q": arguments.get("query", "")} | {k: arguments[k] for k in ("corpus", "limit", "cursor") if arguments.get(k)}
+    try:
+        with urllib.request.urlopen(f"{APP}/search?{urllib.parse.urlencode(params)}", timeout=5) as response:
+            return response.read().decode() + "\n\n" + ATTRIBUTION, False
+    except urllib.error.HTTPError as e:
+        if e.code != 400:
+            return f"Cadence Finder failed with HTTP {e.code}; try again shortly.", True
+        return f"Invalid query: {json.load(e)['detail']}", True
+    except OSError:
+        return "Cadence Finder is still warming up; try again shortly.", True
+
+
+def rpc(message):
+    method, params = message.get("method"), message.get("params") or {}
+    if method == "initialize":
+        version = params.get("protocolVersion")
+        return {"protocolVersion": version if version in PROTOCOL_VERSIONS else PROTOCOL_VERSIONS[0],
+                "capabilities": {"tools": {}}, "serverInfo": {"name": "cadence-finder", "version": "1"},
+                "instructions": INSTRUCTIONS}
+    if method == "ping":
+        return {}
+    if method == "tools/list":
+        return {"tools": [SEARCH_TOOL]}
+    if method == "tools/call" and params.get("name") == "search":
+        text, error = search(params.get("arguments") or {})
+        return {"content": [{"type": "text", "text": text}], "isError": error}
+    raise LookupError(method if method != "tools/call" else f"unknown tool {params.get('name')}")
+
+
+def mcp(event):
+    if event["requestContext"]["http"]["method"] != "POST":
+        return {"statusCode": 405, "headers": {"allow": "POST"}}
+    body = event.get("body") or ""
+    message = json.loads(base64.b64decode(body) if event.get("isBase64Encoded") else body)
+    if "id" not in message:
+        return {"statusCode": 202}
+    try:
+        reply = {"jsonrpc": "2.0", "id": message["id"], "result": rpc(message)}
+    except LookupError as e:
+        reply = {"jsonrpc": "2.0", "id": message["id"], "error": {"code": -32601 if message.get("method") != "tools/call" else -32602, "message": str(e)}}
+    return {"statusCode": 200, "headers": {"content-type": "application/json"}, "body": json.dumps(reply)}
+
+
+def handler(event, context):
     path = event.get("rawPath", "/")
+    if path == "/mcp":
+        return mcp(event)
+    if path.startswith("/.well-known/"):
+        return {"statusCode": 404}
+    state, ready, elapsed = wake()
     query = event.get("rawQueryString", "")
     target = APP + (DEFAULT_PATH if path == "/" else path + (f"?{query}" if query else ""))
     if "application/json" in event.get("headers", {}).get("accept", ""):

@@ -7,6 +7,8 @@ Search for chord progressions and cadences in three annotated corpora by Beethov
 
 **Live demo:** the wake link (`terraform output wake_url` in the `live` workspace) starts the server on demand. Allow about 85 s for a cold start; after that the app is at https://cadence-finder.duckdns.org.
 
+**In Claude:** add the wake link followed by `mcp` (for example `https://<id>.lambda-url.us-east-1.on.aws/mcp`) as a custom connector, under Settings > Connectors. It has one tool, `search`. If the server is asleep, the first call starts it and tells Claude to ask again in about 90 s.
+
 ## How it works
 
 - **Upload:** a TSV goes to S3.
