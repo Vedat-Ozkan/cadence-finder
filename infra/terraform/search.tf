@@ -52,7 +52,7 @@ resource "aws_lambda_function" "search" {
   filename         = local.search_zip
   source_code_hash = filebase64sha256(local.search_zip)
   timeout          = 10
-  memory_size      = 1024
+  memory_size      = 512
   publish          = true
 
   snap_start {
