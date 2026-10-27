@@ -43,6 +43,14 @@ The node is stopped by default to keep the bill under $5 a month.
 2. Check `scripts/node.sh status`.
 3. On the node, check `k get pods`. A pod stuck `ContainerCreating` after a fresh instance usually means the GHCR pull secret is wrong. Re-run `scripts/deploy-live.sh`, which rebuilds it from `/cadence/live/GHCR_TOKEN`.
 
+## After an ingest or reindex
+
+The connector's search Lambda loads every movement before its SnapStart snapshot, so a reindexed movement keeps its old chords there until a new version is published. (`search-api` caches movements the same way until its pod restarts: `k rollout restart deploy/search-api`.) New movements need nothing: both read a movement they haven't seen from DynamoDB. To publish a fresh search Lambda:
+
+```
+TF_WORKSPACE=live terraform -chdir=infra/terraform apply -replace='aws_lambda_function.search[0]'
+```
+
 ## Alarms
 
 <a id="dlq-not-empty"></a>
