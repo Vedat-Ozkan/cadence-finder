@@ -14,9 +14,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.springframework.stereotype.Service;
 
-@Service
 public class SearchService {
 
     public record Hit(String movementId, String title, int firstBar, int lastBar, String chords) {
@@ -30,6 +28,10 @@ public class SearchService {
 
     public SearchService(CadenceTable table) {
         this.table = table;
+    }
+
+    public void preload() {
+        table.readAll().forEach(movement -> movements.put(movement.id(), movement));
     }
 
     public Page search(String text, String corpusId, int limit, String cursor) {

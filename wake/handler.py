@@ -1,16 +1,16 @@
 import base64
 import json
 import os
-import urllib.error
-import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
 import boto3
 
 ec2 = boto3.client("ec2")
+lambda_client = boto3.client("lambda")
 INSTANCE = os.environ["INSTANCE_ID"]
 APP = os.environ["APP_URL"]
+SEARCH_FUNCTION = os.environ["SEARCH_FUNCTION"]
 DEFAULT_PATH = "/search?q=Ger+...+%40PAC&corpus=bps"
 EXPECTED_SECONDS = 90
 PROTOCOL_VERSIONS = ["2025-11-25", "2025-06-18", "2025-03-26"]
@@ -49,7 +49,8 @@ If no chord has a figure, inversions are ignored (V matches V, V6, V65, V7...). 
 
 More examples: "It V" in mps; "V7 vi@DC" in all corpora; "@HC" in bps.
 
-If the server is asleep, the result says it is starting; tell the user and call again after about 90 seconds.""",
+Labels as Sheet Music Analysis writes them are accepted (Cad64, Ger65, Fr43, N6, viiø7, vii°7). In a minor key the corpus writes the \
+leading-tone chords with a sharp: search "#viio7", not "viio7".""",
     "inputSchema": {
         "type": "object",
         "properties": {
@@ -143,19 +144,14 @@ def wake():
 
 
 def search(arguments):
-    state, ready, elapsed = wake()
-    if not ready:
-        return f"Cadence Finder is starting (server {state}, {elapsed} s so far; it usually takes about {EXPECTED_SECONDS} s). Ask again in about a minute and a half.", False
-    params = {"q": arguments.get("query", "")} | {k: arguments[k] for k in ("corpus", "limit", "cursor") if arguments.get(k)}
-    try:
-        with urllib.request.urlopen(f"{APP}/search?{urllib.parse.urlencode(params)}", timeout=5) as response:
-            return response.read().decode() + "\n\n" + ATTRIBUTION, False
-    except urllib.error.HTTPError as e:
-        if e.code != 400:
-            return f"Cadence Finder failed with HTTP {e.code}; try again shortly.", True
-        return f"Invalid query: {json.load(e)['detail']}", True
-    except OSError:
-        return "Cadence Finder is still warming up; try again shortly.", True
+    request = {"query": arguments.get("query", "")} | {k: arguments[k] for k in ("corpus", "limit", "cursor") if arguments.get(k)}
+    response = lambda_client.invoke(FunctionName=SEARCH_FUNCTION, Payload=json.dumps(request))
+    if "FunctionError" in response:
+        return "Cadence Finder search failed; try again shortly.", True
+    reply = json.load(response["Payload"])
+    if "error" in reply:
+        return f"Invalid query: {reply['error']}", True
+    return json.dumps(reply) + "\n\n" + ATTRIBUTION, False
 
 
 def rpc(message):

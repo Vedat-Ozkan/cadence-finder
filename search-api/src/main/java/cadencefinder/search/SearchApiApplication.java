@@ -25,4 +25,9 @@ public class SearchApiApplication {
     CadenceTable cadenceTable(DynamoDbClient dynamo, @Value("${cadence.table}") String table) {
         return new CadenceTable(dynamo, table);
     }
+
+    @Bean
+    SearchService searchService(CadenceTable table) {
+        return new SearchService(table);
+    }
 }

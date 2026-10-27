@@ -6,7 +6,7 @@ Live environment: one t4g.medium running k3s in us-east-1, namespace `cadence`.
 |---|---|
 | App | https://cadence-finder.duckdns.org (`/search`, `/passages/{id}/similar`, `/nl-search`, `/ask`; the last two are rate-limited to 5 a minute per IP) |
 | Public link that wakes the node | `terraform -chdir=infra/terraform output -raw wake_url` (workspace `live`) |
-| MCP connector (Claude) | the wake link plus `mcp`; stateless JSON-RPC in `wake/handler.py`; checked by `MCP_URL=<wake link>mcp uv run pytest e2e/test_mcp.py` (add `EXPECT_ASLEEP=1` when the node is stopped) |
+| MCP connector (Claude) | the wake link plus `mcp`; stateless JSON-RPC in `wake/handler.py`, which invokes the search Lambda (`cadence-finder-live-search`, alias `live`, SnapStart) and never starts the node; checked by `MCP_URL=<wake link>mcp uv run pytest e2e/test_mcp.py` |
 | Dashboard | CloudWatch → Dashboards → `cadence-finder-live` |
 | Traces | CloudWatch → X-Ray traces → Trace map; filter `service("search-api")`. Only 10 % of requests and ingest messages are traced (`OTEL_TRACES_SAMPLER_ARG`) |
 | App logs | Log group `/cadence-finder/live/app` (7 days) |

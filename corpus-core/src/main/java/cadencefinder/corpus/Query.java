@@ -2,6 +2,7 @@ package cadencefinder.corpus;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -18,6 +19,8 @@ public record Query(Level level, List<Query.Step> steps) {
                     + "|(?:Ger|It|Fr)" + FIGBASS + "?)"
                     + "(?:/" + ACCIDENTAL + ROMAN + ")*");
     private static final Pattern HAS_FIGBASS = Pattern.compile("^[^/]*\\d");
+    private static final Map<String, String> PLUGIN_CHORDS = Map.of(
+            "Cad64", "V", "N", "bII", "N6", "bII6", "Ger65", "Ger6", "Fr43", "Fr6");
 
     public record Step(String chord, String cadence, int maxGapBefore) {
 
@@ -45,7 +48,7 @@ public record Query(Level level, List<Query.Step> steps) {
                 continue;
             }
             int at = part.indexOf('@');
-            String chord = at < 0 ? part : part.substring(0, at);
+            String chord = corpusSpelling(at < 0 ? part : part.substring(0, at));
             String cadence = at < 0 ? "" : part.substring(at + 1);
             if (chord.isEmpty() && cadence.isEmpty()) {
                 throw new QueryException("empty step");
@@ -64,6 +67,13 @@ public record Query(Level level, List<Query.Step> steps) {
             throw new QueryException("query must start and end with a step");
         }
         return new Query(figbass ? Level.L1 : Level.L2, List.copyOf(steps));
+    }
+
+    static String corpusSpelling(String chord) {
+        String symbols = chord.replace("ø", "%").replace("/o", "%").replace("°", "o");
+        int slash = symbols.indexOf('/');
+        String head = slash < 0 ? symbols : symbols.substring(0, slash);
+        return PLUGIN_CHORDS.getOrDefault(head, head) + (slash < 0 ? "" : symbols.substring(slash));
     }
 
     public boolean usesCadences() {

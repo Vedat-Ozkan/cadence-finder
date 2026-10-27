@@ -16,7 +16,7 @@ repositories {
 dependencies {
     implementation(platform(libs.spring.boot.bom))
     implementation(platform(libs.spring.cloud.aws.bom))
-    implementation(project(":cadence-store"))
+    implementation(project(":search-core"))
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-restclient")

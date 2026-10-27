@@ -1,3 +1,3 @@
 rootProject.name = "cadence-finder"
 
-include("corpus-core", "cadence-store", "ingest-worker", "search-api")
+include("corpus-core", "cadence-store", "search-core", "ingest-worker", "search-api", "search-lambda")

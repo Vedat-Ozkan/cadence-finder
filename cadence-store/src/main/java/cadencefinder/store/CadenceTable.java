@@ -15,6 +15,7 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.BatchWriteItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.PutRequest;
 import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
+import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.WriteRequest;
 
 public final class CadenceTable {
@@ -60,13 +61,27 @@ public final class CadenceTable {
         if (item == null || item.isEmpty()) {
             return Optional.empty();
         }
-        return Optional.of(new Movement(
-                movementId,
+        return Optional.of(movement(item));
+    }
+
+    private static Movement movement(Map<String, AttributeValue> item) {
+        String pk = item.get("pk").s();
+        return new Movement(
+                pk.substring("MOV#".length()),
                 Corpus.byId(item.get("corpus").s()),
                 item.get("title").s(),
                 item.get("globalkey").s(),
                 TokenCodec.decode(item.get("l1").s()),
-                TokenCodec.decode(item.get("l2").s())));
+                TokenCodec.decode(item.get("l2").s()));
+    }
+
+    public Stream<Movement> readAll() {
+        ScanRequest request = ScanRequest.builder()
+                .tableName(table)
+                .filterExpression("sk = :meta")
+                .expressionAttributeValues(Map.of(":meta", s(META)))
+                .build();
+        return dynamo.scanPaginator(request).items().stream().map(CadenceTable::movement);
     }
 
     public Stream<String> movementsWith(String gram, String fromMovementSortKey, String toMovementSortKey) {

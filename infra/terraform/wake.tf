@@ -36,6 +36,11 @@ resource "aws_iam_role_policy" "wake" {
       },
       {
         Effect   = "Allow"
+        Action   = "lambda:InvokeFunction"
+        Resource = aws_lambda_alias.search[0].arn
+      },
+      {
+        Effect   = "Allow"
         Action   = ["logs:CreateLogStream", "logs:PutLogEvents"]
         Resource = "${aws_cloudwatch_log_group.wake[0].arn}:*"
       }
@@ -63,8 +68,9 @@ resource "aws_lambda_function" "wake" {
 
   environment {
     variables = {
-      INSTANCE_ID = aws_instance.node[0].id
-      APP_URL     = "https://${var.duckdns_domain}.duckdns.org"
+      INSTANCE_ID     = aws_instance.node[0].id
+      APP_URL         = "https://${var.duckdns_domain}.duckdns.org"
+      SEARCH_FUNCTION = aws_lambda_alias.search[0].arn
     }
   }
 

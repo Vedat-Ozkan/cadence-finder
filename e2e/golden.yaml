@@ -126,3 +126,26 @@
 - name: unknown chord
   query: Ger6 Xyz
   status: 400
+
+- name: Sheet Music Analysis spelling, German sixth with a figure
+  query: Ger65 ... @PAC
+  corpus: bps
+  status: 200
+  count: 25
+  includes:
+    - movement: bps:01-1
+      bars: [140, 142]
+
+- name: Sheet Music Analysis spelling, cadential six-four
+  query: Cad64 V7 I@PAC
+  corpus: bps
+  status: 200
+  includes:
+    - movement: bps:01-1
+      bars: [39, 41]
+
+- name: Sheet Music Analysis spelling, Neapolitan
+  query: N6 V
+  corpus: bps
+  status: 200
+  count: 11

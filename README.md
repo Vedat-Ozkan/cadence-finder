@@ -7,7 +7,7 @@ Search for chord progressions and cadences in three annotated corpora by Beethov
 
 **Live demo:** the wake link (`terraform output wake_url` in the `live` workspace) starts the server on demand. Allow about 85 s for a cold start; after that the app is at https://cadence-finder.duckdns.org.
 
-**In Claude:** add the wake link followed by `mcp` (for example `https://<id>.lambda-url.us-east-1.on.aws/mcp`) as a custom connector, under Settings > Connectors. It has one tool, `search`. If the server is asleep, the first call starts it and tells Claude to ask again in about 90 s.
+**In Claude:** add the wake link followed by `mcp` (for example `https://<id>.lambda-url.us-east-1.on.aws/mcp`) as a custom connector, under Settings > Connectors. It has one tool, `search`, which answers at once whether or not the server is running: the wake Lambda calls a Java search Lambda (SnapStart) that reads the index in DynamoDB. Labels as Sheet Music Analysis writes them (`Cad64`, `Ger65`, `viiø7`) are accepted.
 
 ## How it works
 
@@ -47,6 +47,8 @@ Search for chord progressions and cadences in three annotated corpora by Beethov
 |---|---|
 | `corpus-core/` | TSV parser, tokenizer, query grammar, matcher, passage text |
 | `cadence-store/` | DynamoDB table access |
+| `search-core/` | Search over the DynamoDB index, shared by `search-api` and `search-lambda` |
+| `search-lambda/` | The connector's search: a Java 25 Lambda with SnapStart (`./gradlew :search-lambda:build` writes the zip Terraform deploys) |
 | `ingest-worker/`, `search-api/` | Spring Boot 4.1 on Java 25 |
 | `embedder/` | FastAPI on Python 3.14, pgvector |
 | `wake/` | Lambda that wakes the node |
