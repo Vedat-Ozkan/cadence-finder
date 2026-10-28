@@ -1,5 +1,8 @@
 # Cadence Finder
 
+[![ci](https://github.com/Vedat-Ozkan/cadence-finder/actions/workflows/ci.yml/badge.svg)](https://github.com/Vedat-Ozkan/cadence-finder/actions/workflows/ci.yml)
+[![images](https://github.com/Vedat-Ozkan/cadence-finder/actions/workflows/images.yml/badge.svg)](https://github.com/Vedat-Ozkan/cadence-finder/actions/workflows/images.yml)
+
 Search for chord progressions and cadences in the 40 annotated corpora of DCML's Distant Listening Corpus: 1,284 movements by 36 composers, from Monteverdi to Poulenc (CC BY-NC-SA 4.0; see [NOTICE](NOTICE)).
 - Structured queries like `Ger ... @PAC` ("a German sixth leading, within four chords, to a perfect authentic cadence").
 - Similar-passage search over embeddings.
@@ -8,6 +11,10 @@ Search for chord progressions and cadences in the 40 annotated corpora of DCML's
 **Live demo:** the wake link (`terraform output wake_url` in the `live` workspace) starts the server on demand. Allow about 85 s for a cold start; after that the app is at https://cadence-finder.duckdns.org.
 
 **In Claude:** add the wake link followed by `mcp` (for example `https://<id>.lambda-url.us-east-1.on.aws/mcp`) as a custom connector, under Settings > Connectors. It has one tool, `search`, which answers at once whether or not the server is running: the wake Lambda calls a Java search Lambda (SnapStart) that reads the index in DynamoDB. Labels as Sheet Music Analysis writes them (`Cad64`, `Ger65`, `viiø7`) are accepted.
+
+## Why this stack
+
+A search over 1,284 movements would fit in one process with SQLite. This project is deliberately built as a practice lab for running a production backend: an event-driven ingest pipeline with a dead-letter queue, services on Kubernetes (one k3s node, and the same manifests on EKS), infrastructure in Terraform, end-to-end tests against LocalStack, load tests in CI, one trace across every service, alarms, and a game day with injected failures. The results below are measured on it, and it costs about $0.80 a month while stopped and about $0.04 an hour while running (details in [docs/results.md](docs/results.md#cost)).
 
 ## How it works
 
