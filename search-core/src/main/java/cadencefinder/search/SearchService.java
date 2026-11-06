@@ -50,7 +50,10 @@ public class SearchService {
         try (Stream<String> candidates = table.movementsWith(anchor(query), from, prefix + "￿")) {
             Iterator<String> ids = candidates.iterator();
             while (ids.hasNext()) {
-                Movement movement = movements.computeIfAbsent(ids.next(), id -> table.read(id).orElseThrow());
+                Movement movement = movements.computeIfAbsent(ids.next(), id -> table.read(id).orElse(null));
+                if (movement == null) {
+                    continue;
+                }
                 if (query.usesCadences() && !movement.corpus().hasCadences()) {
                     continue;
                 }

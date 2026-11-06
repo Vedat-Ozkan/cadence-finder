@@ -9,6 +9,7 @@ from pathlib import Path
 
 import boto3
 import pytest
+from boto3.dynamodb.conditions import Key
 import yaml
 
 HERE = Path(__file__).resolve().parent
@@ -149,6 +150,23 @@ def test_reindex_rewrites_the_movement(ingested, s3):
     status, body = post("/reindex/bps:01-1", {})
     assert status == 202, body
     wait_for(lambda: s3.head_object(Bucket=BUCKET, Key=key)["LastModified"] > before, 120, "bps:01-1 to be reindexed")
+
+
+def test_a_movement_half_written_by_a_failed_ingest_does_not_break_search(ingested):
+    table = boto3.resource("dynamodb", **AWS).Table(os.environ.get("CADENCE_TABLE", "cadence-e2e"))
+    rows = table.query(KeyConditionExpression=Key("pk").eq("MOV#bps:01-1") & Key("sk").begins_with("OCC#L2#"))["Items"]
+    row = next(row for row in rows if ">" not in row["gram"] and "@" not in row["gram"])
+    half = row | {"pk": "MOV#bps:zz-half", "gsi1sk": "MOV#bps:zz-half#00000"}
+    gram = row["gram"].split("#", 1)[1]
+    status, before = get("/search", {"q": gram, "corpus": "bps", "limit": 200})
+    assert status == 200
+    table.put_item(Item=half)
+    try:
+        status, after = get("/search", {"q": gram, "corpus": "bps", "limit": 200})
+    finally:
+        table.delete_item(Key={"pk": half["pk"], "sk": half["sk"]})
+    assert status == 200
+    assert after["results"] == before["results"]
 
 
 def test_reindex_unknown_movement(ingested):
