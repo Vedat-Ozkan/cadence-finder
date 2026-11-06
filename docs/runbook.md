@@ -143,7 +143,7 @@ k logs <pod> --previous --tail=100
 
 ## pgvector disk full
 
-Postgres lives on a 5Gi `local-path` PVC on the node's 10 GB root disk. The corpus uses well under 1 GB.
+Postgres lives on a 5Gi `local-path` PVC on the node's 20 GB root disk. The corpus uses well under 1 GB.
 
 1. Check usage:
    ```
