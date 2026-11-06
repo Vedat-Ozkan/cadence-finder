@@ -153,7 +153,7 @@ Postgres lives on a 5Gi `local-path` PVC on the node's 20 GB root disk. The corp
    ```
 2. If the root disk is full, the usual cause is old container images. Run `k3s crictl rmi --prune`.
 3. If Postgres itself grew, from repeated re-ingests leaving dead tuples, run `k exec postgres-0 -- psql -U postgres -c 'VACUUM FULL passages'`.
-4. **Last resort:** the embeddings can always be rebuilt. Delete the PVC and pod, then re-ingest by uploading the corpus again or running the e2e suite against live. That costs about $0.55 of Voyage.
+4. **Last resort:** the embeddings can always be rebuilt. Delete the PVC and pod, then re-ingest by uploading the corpus again or running the e2e suite against live. That costs about $2 of Voyage.
 5. To grow the disk, raise `volume_size` in `infra/terraform/ec2.tf`. Growing works in place; shrinking needs a new instance.
 
 ## Deploying
