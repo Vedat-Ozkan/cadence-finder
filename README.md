@@ -8,7 +8,7 @@ Search for chord progressions and cadences in the 40 annotated corpora of DCML's
 - Similar-passage search over embeddings.
 - Plain-English questions, turned into validated structured queries by Claude.
 
-**Live demo:** the wake link (`terraform output wake_url` in the `live` workspace) starts the server on demand. Allow about 85 s for a cold start; after that the app is at https://cadence-finder.duckdns.org.
+**Live demo:** the wake link (`terraform output wake_url` in the `live` workspace) starts the server on demand. Allow about 2 minutes for a cold start; after that the app is at https://cadence-finder.duckdns.org.
 
 **In Claude:** add the wake link followed by `mcp` (for example `https://<id>.lambda-url.us-east-1.on.aws/mcp`) as a custom connector, under Settings > Connectors. It has one tool, `search`, which answers at once whether or not the server is running: the wake Lambda calls a Java search Lambda (SnapStart) that reads the index in DynamoDB. Labels as Sheet Music Analysis writes them (`Cad64`, `Ger65`, `viiø7`) are accepted.
 
@@ -37,11 +37,12 @@ A search over 1,284 movements would fit in one process with SQLite. This project
 
 | | |
 |---|---|
-| `/search` at 80 RPS on 2 vCPUs | p50 34 ms, p95 57 ms, p99 216 ms, 0 errors |
-| Max rate with p99 < 200 ms | ~80 RPS |
-| `/nl-search` (Claude) | p50 1.6 s, p99 3.6 s |
-| Ingestion | 14,788 passages in 164 s (~90/s) |
-| Cold start from stopped | ~85 s to first result |
+| `/search` at 120 RPS on 2 vCPUs, warm | p50 31 ms, p95 42 ms, p99 101 ms, 0 errors |
+| Same ramp on a cold replica | aborts at 40 RPS (p99 3.2 s) while new replicas warm up |
+| `/search` across all 40 corpora at 20 RPS, warm | p50 36 ms, p99 557 ms, 0 errors |
+| `/nl-search` (Claude) | p50 1.9 s, p99 4.2 s, with a limit of 5 a minute |
+| Ingestion | 53,654 passages in total; ~77/s while adding 1,093 movements |
+| Cold start from stopped | ~110 s to first result |
 | Retrieval, self-labelled hit rate@5 | `/nl-search` 1.00; text search 0.62–0.69, rerank 0.69–1.00 |
 | One trace across the API, SQS, worker and embedder | yes, a single X-Ray trace |
 | `/ask` (RAG with validated citations) | 8/8 grounded; 8/8 prompt-injection cases pass; p50 9 s |

@@ -1,10 +1,23 @@
 # Results
 
-All figures were measured on 2026-10-24 against the live deployment: one t4g.medium (2 arm64 vCPUs, 4 GB) running k3s in us-east-1, unless a row says otherwise.
+Load, `/nl-search`, ingestion and cold start were measured again on 2026-11-05 with all 1,284 movements live. Everything else was measured on 2026-10-24 with 188 movements (Beethoven and Mozart). All figures are against the live deployment: one t4g.medium (2 arm64 vCPUs, 4 GB) running k3s in us-east-1, unless a row says otherwise.
 
 ## Latency under load (`/search`)
 
-k6 `ramping-arrival-rate` from a laptop on the US east coast, over HTTPS through Traefik (`loadtest/ramp.js`). Each stage is 60 s at a fixed request rate, cycling through the 10 golden queries with `limit=50`. search-api ran 3 replicas (HPA at 70 % CPU).
+k6 `ramping-arrival-rate` from a laptop on the US east coast, over HTTPS through Traefik (`loadtest/ramp.js`). Each stage is 60 s at a fixed request rate, cycling through the 10 golden queries with `limit=50`. search-api ran 3 warm replicas (HPA at 70 % CPU). The golden queries each name one of the three original collections, so this table does not exercise the new data.
+
+2026-11-05, 1,284 movements:
+
+| Target rate | Achieved | p50 | p95 | p99 | Errors |
+|---|---|---|---|---|---|
+| 5 RPS | 5.0 | 35 ms | 58 ms | 69 ms | 0 % |
+| 10 RPS | 10.0 | 34 ms | 47 ms | 67 ms | 0 % |
+| 20 RPS | 20.0 | 32 ms | 62 ms | 106 ms | 0 % |
+| 40 RPS | 40.0 | 31 ms | 40 ms | 45 ms | 0 % |
+| 80 RPS | 80.0 | 31 ms | 46 ms | 126 ms | 0 % |
+| 120 RPS | 120.0 | 31 ms | 42 ms | 101 ms | 0 % |
+
+2026-10-24, 188 movements:
 
 | Target rate | Achieved | p50 | p95 | p99 | Errors |
 |---|---|---|---|---|---|
@@ -15,7 +28,9 @@ k6 `ramping-arrival-rate` from a laptop on the US east coast, over HTTPS through
 | 80 RPS | 80.0 | 34 ms | 57 ms | 216 ms | 0 % |
 | 120 RPS | collapsed | 5.3 s | 7.0 s | 7.4 s | 2.9 % (aborted) |
 
-- **Maximum rate with p99 under 200 ms:** about 80 RPS; p99 reaches 216 ms at 80. At 120 RPS the two vCPUs saturate and the test aborts on its p99 > 1 s guard.
+- **Maximum rate with p99 under 200 ms:** at least 120 RPS when warm, the highest rate tried. The two dates are not a clean comparison: how warm the replicas were on 2026-10-24 was not recorded.
+- **Cold replicas are the weak spot.** On 2026-11-05 the same ramp started on one replica that had been idle for about 30 minutes held 20 RPS (p99 249 ms), then the autoscaler added cold replicas and 40 RPS reached p99 3.2 s, so the test aborted on its p99 > 1 s guard. Before that, a first attempt aborted during 5 RPS. The rerun above started about a minute later with those replicas warm.
+- **All 40 collections, no corpus filter:** 20 RPS for 120 s on warm replicas, 2,401 requests: p50 36 ms, p95 119 ms, p99 557 ms, 0 errors. search-api stayed at about 420 MiB of its 576 MiB limit with no restarts.
 - **Server side:** `http.server.request.duration` for `GET /search`, exported by the ADOT Java agent as an exponential histogram through EMF. In normal traffic the server-side p50 is a few milliseconds below the client figure. Right after a deploy or a wake, server-side p99 runs at about 2.3 s for the first ~100 requests while the JVMs warm up. That is why the p99 alarm only counts 5-minute windows with at least 50 requests.
 - **Cold JVMs:** a first ramp started 2 minutes after a deploy aborted at 5 RPS (p99 4.5 s). Warm-up matters on this node size.
 
@@ -23,9 +38,12 @@ k6 `ramping-arrival-rate` from a laptop on the US east coast, over HTTPS through
 
 0.2 RPS for 60 s alongside 5 RPS of `/search` (`NL=1 loadtest/ramp.js`). This uses `claude-opus-5-5` at effort `low` with structured output.
 
-| p50 | p95 | p99 | Errors |
-|---|---|---|---|
-| 1.64 s | 3.02 s | 3.64 s | 0 % |
+| Date | Requests | p50 | p95 | p99 | Errors |
+|---|---|---|---|---|---|
+| 2026-11-05 | 12 | 1.91 s | 4.00 s | 4.16 s | 25 % (3 rate-limited) |
+| 2026-10-24 | | 1.64 s | 3.02 s | 3.64 s | 0 % |
+
+The 2026-11-05 errors are the ingress limit of 5 requests a minute with a burst of 5, which this test exceeds; a separate burst returned the same 429s. Their fast rejections are included in the percentiles, so successful requests are somewhat slower than shown.
 
 The model call is almost all of it. Parsing and the structured search behind it add tens of milliseconds.
 
@@ -34,6 +52,7 @@ The model call is almost all of it. Parsing and the structured search behind it 
 Uploading all 188 movement files to S3 → SQS → worker (parse, embed through the embedder with `voyage-4-large`, write DynamoDB, write the passages file):
 
 - **14,788 passages in 164 s,** from the first to the last completion marker: **about 90 passages/s, or 69 movements/min**, with one worker replica.
+- **2026-11-05, adding 1,093 movements to the live system:** 505 s from first to last completion marker, about 38,800 passages: **about 77 passages/s, or 130 movements/min**. The total is now 53,654 passages and a 734 MB database, with nothing in the DLQ.
 - The worker embeds before writing to DynamoDB, so a Voyage failure retries cheaply.
 - A malformed file reaches the DLQ after 3 receives, as the e2e test checks.
 
@@ -47,6 +66,8 @@ The node is stopped when idle. Opening the wake link (a Lambda function URL) sta
 | Instance running | ~16 s |
 | k3s, pods, DuckDNS and HTTPS ready; page redirects | ~80–85 s |
 | First query after the redirect | 0.8 s |
+
+These steps are from 2026-10-24. On 2026-11-05, with all the data, the time from opening the wake link to the first successful `/search` was **108 s with one search-api replica** and 140 s with three, after a load test had scaled it up (one run each); the next query took 1.0 s and 1.6 s. The wake page took 2.2-2.3 s.
 
 The node powers itself off after 30 minutes without API traffic. This was checked: the last request was at 14:56 and the node stopped at 15:31 UTC.
 
@@ -93,11 +114,11 @@ Takeaways:
 
 ## Cost
 
-- **Stopped node:** about $0.80 a month, for the 10 GB gp3 disk.
+- **Stopped node:** about $1.60 a month, for the 20 GB gp3 disk. It was 10 GB until 2026-11-05, when pulling new images filled it and evicted the pods.
 - **Running node:** about $0.039 an hour (instance plus public IPv4).
 - **Wake Lambda:** within the free tier.
 - **CloudWatch:** two alarms at about $0.20 a month. Custom metrics are prorated by the hour, so they cost almost nothing while the node is off.
-- **One full live re-ingest:** about $0.55 of Voyage `voyage-4-large`.
+- **One full live re-ingest:** about $2 of Voyage `voyage-4-large`, scaled by passages from $0.55 for 188 movements.
 
 ## `/ask`: grounded answers with validated citations
 
