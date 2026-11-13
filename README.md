@@ -14,7 +14,7 @@ Search for chord progressions and cadences in the 40 annotated corpora of DCML's
 
 ## Why this stack
 
-A search over 1,284 movements would fit in one process with SQLite. This project is deliberately built as a practice lab for running a production backend: an event-driven ingest pipeline with a dead-letter queue, services on Kubernetes (one k3s node, and the same manifests on EKS), infrastructure in Terraform, end-to-end tests against LocalStack, load tests in CI, one trace across every service, alarms, and a game day with injected failures. The results below are measured on it, and it costs about $0.80 a month while stopped and about $0.04 an hour while running (details in [docs/results.md](docs/results.md#cost)).
+A search over 1,284 movements would fit in one process with SQLite. This project is deliberately built as a practice lab for running a production backend: an event-driven ingest pipeline with a dead-letter queue, services on Kubernetes (one k3s node, and the same manifests on EKS), infrastructure in Terraform, end-to-end tests against LocalStack, load tests in CI, one trace across every service, alarms, and a game day with injected failures. The results below are measured on it, and it costs about $1.60 a month while stopped and about $0.04 an hour while running (details in [docs/results.md](docs/results.md#cost)).
 
 ## How it works
 
@@ -37,13 +37,13 @@ A search over 1,284 movements would fit in one process with SQLite. This project
 
 | | |
 |---|---|
-| `/search` at 120 RPS on 2 vCPUs, warm | p50 31 ms, p95 42 ms, p99 101 ms, 0 errors |
+| `/search` at 120 RPS on 2 vCPUs, 3 warm replicas, queries on the 3 original corpora | p50 31 ms, p95 42 ms, p99 101 ms, 0 errors |
 | Same ramp on a cold replica | aborts at 40 RPS (p99 3.2 s) while new replicas warm up |
 | `/search` across all 40 corpora at 20 RPS, warm | p50 36 ms, p99 557 ms, 0 errors |
 | `/nl-search` (Claude) | p50 1.9 s, p99 4.2 s, with a limit of 5 a minute |
 | Ingestion | 53,654 passages in total; ~77/s while adding 1,093 movements |
 | Cold start from stopped | ~110 s to first result |
-| Retrieval, self-labelled hit rate@5 | `/nl-search` 1.00; text search 0.62–0.69, rerank 0.69–1.00 |
+| Retrieval, self-labelled hit rate@5 | `/nl-search` 1.00; text search 0.62–0.67, rerank 0.69–1.00 |
 | One trace across the API, SQS, worker and embedder | yes, a single X-Ray trace |
 | `/ask` (RAG with validated citations) | 8/8 grounded; 8/8 prompt-injection cases pass; p50 9 s |
 | In-cluster `/search`, after warm-up | one k3s node: 320 RPS at p99 152 ms; EKS with 2 nodes: 240 RPS at p99 19 ms |
@@ -68,6 +68,8 @@ A search over 1,284 movements would fit in one process with SQLite. This project
 | `docs/` | [build plan](docs/build-plan.md), [runbook](docs/runbook.md), [results](docs/results.md) |
 
 ## Running the tests locally
+
+Building needs JDK 25: every Java module sets a Gradle toolchain of 25, and the build doesn't download one.
 
 ```
 scripts/fetch-corpus.sh
