@@ -19,6 +19,33 @@ spec:
                 name: search-api
                 port:
                   name: http
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: passages-rate-limit
+  namespace: cadence
+spec:
+  rateLimit:
+    average: 30
+    period: 1m
+    burst: 10
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: search-api-passages
+  namespace: cadence
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
+    traefik.ingress.kubernetes.io/router.middlewares: cadence-passages-rate-limit@kubernetescrd
+spec:
+  rules:
+    - host: cadence-finder.duckdns.org
+      http:
+        paths:
           - path: /passages
             pathType: Prefix
             backend:
