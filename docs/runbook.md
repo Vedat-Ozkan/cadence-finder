@@ -15,6 +15,8 @@ Live environment: one t4g.medium running k3s in us-east-1, namespace `cadence`.
 | Secrets | SSM Parameter Store `/cadence/live/*` (SecureString) |
 | Budget | `monthly-10usd`: emails at 80 % of $10 actual and 100 % forecast (`aws_budgets_budget.monthly`, workspace `live`) |
 
+Terraform plans and applies need the address for alarm and budget emails, which is not committed. Put `alarm_email = "<address>"` in `infra/terraform/terraform.tfvars` (gitignored, loaded automatically) or export `TF_VAR_alarm_email`.
+
 ## Getting a shell on the node
 
 There is no SSH. Use Session Manager (install the AWS `session-manager-plugin` locally once):

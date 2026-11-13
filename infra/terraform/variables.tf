@@ -22,8 +22,7 @@ variable "duckdns_domain" {
 }
 
 variable "alarm_email" {
-  type    = string
-  default = "vedatkemalozkan@gmail.com"
+  type = string
 }
 
 variable "eks" {
