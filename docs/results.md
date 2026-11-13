@@ -117,7 +117,7 @@ Takeaways:
 - **Stopped node:** about $1.60 a month, for the 20 GB gp3 disk. It was 10 GB until 2026-11-05, when pulling new images filled it and evicted the pods.
 - **Running node:** about $0.039 an hour (instance plus public IPv4).
 - **Wake Lambda:** within the free tier.
-- **CloudWatch:** two alarms at about $0.20 a month. Custom metrics are prorated by the hour, so they cost almost nothing while the node is off.
+- **CloudWatch:** four alarms with five alarm metrics (the p99 alarm reads two), about $0.50 a month at the list price of $0.10 per alarm metric; this is from the price list, not the bill, and the free tier's 10 alarm metrics may cover it. Custom metrics are prorated by the hour, so they cost almost nothing while the node is off.
 - **One full live re-ingest:** about $2 of Voyage `voyage-4-large`, scaled by passages from $0.55 for 188 movements.
 
 ## `/ask`: grounded answers with validated citations

@@ -30,9 +30,9 @@ For one-off commands without a session, `aws ssm send-command --document-name AW
 
 The node is stopped by default to keep the bill under $5 a month.
 
-- **A visitor** opens the wake link. The Lambda starts the instance and shows a cold-start page with a timer and progress bar. It redirects once `/search` answers, about 80–90 s after a stopped start.
+- **A visitor** opens the wake link. The Lambda starts the instance and shows a cold-start page with a timer and progress bar. It redirects once `/search` answers, about 110 s after a stopped start (108 s on 2026-11-05).
 - **You:** `scripts/node.sh start`, `scripts/node.sh stop` or `scripts/node.sh status`.
-- **Automatic stop:** `idle-stop.timer` on the node powers it off once it has been up for 30 min and Traefik has logged no `/search`, `/passages` or `/nl-search` request for 30 min.
+- **Automatic stop:** `idle-stop.timer` on the node powers it off once it has been up for 30 min and Traefik has logged no `/search`, `/passages`, `/nl-search` or `/ask` request for 30 min.
   - To keep it up while working without traffic, run `systemctl stop idle-stop.timer` on the node. A reboot brings the timer back.
 - **On every boot,** `duckdns-update.service` points `cadence-finder.duckdns.org` at the new public IP. If the name points at an old IP:
   - check `systemctl status duckdns-update` and `journalctl -u duckdns-update`;
@@ -159,7 +159,7 @@ Postgres lives on a 5Gi `local-path` PVC on the node's 20 GB root disk. The corp
 ## Deploying
 
 1. Push to `main`. `images.yml` publishes `ghcr.io/vedat-ozkan/cadence-finder/*:<sha>` and `:main`.
-   - **If GitHub Actions can't run** (the private repo's minutes or spending limit ran out), sideload instead:
+   - **If GitHub Actions can't run,** sideload instead:
      1. Build arm64 images locally with `docker buildx build --platform linux/arm64 -t ghcr.io/vedat-ozkan/cadence-finder/<svc>:<sha> --output type=docker,dest=<svc>.tar <svc>`.
      2. Gzip each one and copy it to `s3://cadence-finder-live-961136197755/images/`.
      3. On the node: `aws s3 cp s3://…/images/<svc>.tar.gz - | gunzip | k3s ctr images import -`.
