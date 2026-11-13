@@ -75,8 +75,6 @@ resource "aws_lambda_function" "wake" {
   timeout          = 10
   memory_size      = 128
 
-  reserved_concurrent_executions = 10
-
   environment {
     variables = {
       INSTANCE_ID     = aws_instance.node[0].id
