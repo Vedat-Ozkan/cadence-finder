@@ -185,3 +185,9 @@ curl -s -X POST "http://$(k get svc search-api -o jsonpath='{.spec.clusterIP}')/
    - `DUCKDNS_TOKEN`
 2. Re-run `scripts/deploy-live.sh`, which rebuilds the Kubernetes secrets.
 3. For `DUCKDNS_TOKEN`, run `systemctl restart duckdns-update` on the node instead.
+
+## Pod credentials
+
+On k3s the pods get AWS credentials from the node's instance profile: `scripts/deploy-live.sh` creates no `aws-credentials` secret, so search-api, ingest-worker and the collector fall back to the instance metadata service (IMDSv2). A request from a pod crosses one more network hop than one from the host, so the metadata hop limit is 2 (`infra/terraform/ec2.tf`); with 1, those pods would get no credentials.
+
+The cost of this: every pod on the node, Postgres and the embedder included, can take the node role. That role can read every parameter under `/cadence/live/*`, use the app's S3, SQS, DynamoDB, X-Ray and CloudWatch Logs permissions, and register with Systems Manager. Per-pod roles, as Pod Identity gives on EKS, would remove this; k3s on EC2 has no built-in equivalent.
