@@ -14,6 +14,7 @@ APP = os.environ["APP_URL"]
 SEARCH_FUNCTION = os.environ["SEARCH_FUNCTION"]
 DEFAULT_PATH = "/search?q=Ger+...+%40PAC&corpus=bps"
 EXPECTED_SECONDS = 90
+ROBOTS = "User-agent: *\nDisallow: /\n"
 PROTOCOL_VERSIONS = ["2025-11-25", "2025-06-18", "2025-03-26"]
 CORPORA = [line.rstrip("\n").split("\t") for line in open(Path(__file__).with_name("corpora.tsv"), encoding="utf-8")]
 COMPOSERS = ", ".join(sorted({row[2] for row in CORPORA}, key=lambda name: name.split()[-1]))
@@ -194,7 +195,9 @@ def handler(event, context):
     path = event.get("rawPath", "/")
     if path == "/mcp":
         return mcp(event)
-    if path.startswith("/.well-known/"):
+    if path == "/robots.txt":
+        return {"statusCode": 200, "headers": {"content-type": "text/plain"}, "body": ROBOTS}
+    if path not in ("/", "/search") and not path.startswith("/passages/"):
         return {"statusCode": 404}
     state, ready, elapsed = wake()
     query = event.get("rawQueryString", "")

@@ -4,8 +4,8 @@ Live environment: one t4g.medium running k3s in us-east-1, namespace `cadence`.
 
 | Thing | Where |
 |---|---|
-| App | https://cadence-finder.duckdns.org (`/search`, `/passages/{id}/similar`, `/nl-search`, `/ask`; the last two are rate-limited to 5 a minute per IP) |
-| Public link that wakes the node | `terraform -chdir=infra/terraform output -raw wake_url` (workspace `live`) |
+| App | https://cadence-finder.duckdns.org (`/search`, `/passages/{id}/similar`, `/nl-search`, `/ask`). Per client IP, `/nl-search` and `/ask` are rate-limited to 5 a minute, and `/passages` (its rerank calls Voyage) to 30 a minute with bursts of 10. With the default `externalTrafficPolicy: Cluster`, ServiceLB hands Traefik a cluster address instead of the client's, so each limit is shared by all visitors. Traefik's Service is set to `Local` to keep client IPs; check that `ClientHost` in Traefik's access log shows public addresses |
+| Public link that wakes the node | `terraform -chdir=infra/terraform output -raw wake_url` (workspace `live`). Only `/`, `/search` and `/passages/…` wake the node; other paths get a 404, `/robots.txt` disallows crawling, and at most 10 requests run at once |
 | MCP connector (Claude) | the wake link plus `mcp`; stateless JSON-RPC in `wake/handler.py`, which invokes the search Lambda (`cadence-finder-live-search`, alias `live`, SnapStart) and never starts the node; checked by `MCP_URL=<wake link>mcp uv run pytest e2e/test_mcp.py` |
 | Dashboard | CloudWatch → Dashboards → `cadence-finder-live` |
 | Traces | CloudWatch → X-Ray traces → Trace map; filter `service("search-api")`. Only 10 % of requests and ingest messages are traced (`OTEL_TRACES_SAMPLER_ARG`) |
@@ -13,6 +13,7 @@ Live environment: one t4g.medium running k3s in us-east-1, namespace `cadence`.
 | Metrics (EMF) | Namespace `CadenceFinder/live`, log group `/cadence-finder/live/metrics` |
 | Alarms | `cadence-finder-live-dlq-not-empty`, `-search-p99`, `-ingest-stalled`, `-search-api-5xx`, all to SNS topic `cadence-finder-live-alarms` |
 | Secrets | SSM Parameter Store `/cadence/live/*` (SecureString) |
+| Budget | `monthly-10usd`: emails at 80 % of $10 actual and 100 % forecast (`aws_budgets_budget.monthly`, workspace `live`) |
 
 ## Getting a shell on the node
 
