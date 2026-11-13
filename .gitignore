@@ -8,6 +8,7 @@ build/
 .venv/
 __pycache__/
 *.tfplan
+*.tfvars
 .claude/settings.local.json
 loadtest/results/
 /e2e/results/
