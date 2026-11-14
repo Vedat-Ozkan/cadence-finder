@@ -64,7 +64,7 @@ leading-tone chords with a sharp: search "#viio7", not "viio7".""",
             "corpus": {"type": "string", "enum": [row[0] for row in CORPORA],
                        "description": "Omit to search every collection. " + "; ".join(
                            f"{row[0]}: {row[3]}" + ("" if row[4] == "true" else " (no cadence labels)") for row in CORPORA)},
-            "limit": {"type": "integer", "minimum": 1, "maximum": 200, "description": "Results per page (default 50)"},
+            "limit": {"type": "integer", "minimum": 1, "maximum": 200, "description": "About how many results a page holds (default 50): a page ends with the movement that reaches this number, so it can hold more"},
             "cursor": {"type": "string", "description": "nextCursor from a previous result, for the next page"},
         },
         "required": ["query"],
