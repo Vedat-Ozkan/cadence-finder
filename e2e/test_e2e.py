@@ -120,6 +120,13 @@ def test_golden(ingested, case):
         assert len(hits) == case["count"]
 
 
+def test_a_long_query_that_rarely_matches_answers_within_a_minute(ingested):
+    started = time.monotonic()
+    status, body, _ = search("V ... " * 32 + "@EC", None)
+    assert status == 200, body
+    assert time.monotonic() - started < 60
+
+
 def similar(passage_id, **params):
     return get(f"/passages/{urllib.parse.quote(passage_id, safe='')}/similar", params)
 

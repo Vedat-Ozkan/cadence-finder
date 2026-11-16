@@ -34,6 +34,19 @@ k6 `ramping-arrival-rate` from a laptop on the US east coast, over HTTPS through
 - **Server side:** `http.server.request.duration` for `GET /search`, exported by the ADOT Java agent as an exponential histogram through EMF. In normal traffic the server-side p50 is a few milliseconds below the client figure. Right after a deploy or a wake, server-side p99 runs at about 2.3 s for the first ~100 requests while the JVMs warm up. That is why the p99 alarm only counts 5-minute windows with at least 50 requests.
 - **Cold JVMs:** a first ramp started 2 minutes after a deploy aborted at 5 RPS (p99 4.5 s). Warm-up matters on this node size.
 
+## Long queries with gaps (matcher, 2026-11-16)
+
+A query made of many steps joined by `...` that rarely completes made the matcher try every way of placing each gap again from every starting chord, so its work grew exponentially with the number of steps. The matcher now remembers the positions from which the rest of the query cannot be completed. Measured with the command-line search over all 1,284 movements on a development PC (`V ... V ... ` repeated, ending in `@EC`); the time includes about 1 to 3 s of start-up and loading:
+
+| Steps | Before | After |
+|---|---|---|
+| 20 | 3.7 s | 2.0 s |
+| 26 | 32.8 s | 3.0 s |
+| 32 | stopped at 90 s | 2.7 s |
+| 200 | not tried | 2.6 s |
+
+Thirteen queries (nine ordinary ones and the 8, 12, 16 and 20-step ones) return the same matches before and after. Not measured on the live service, and the request-rate limit and step limit the review also suggested for `/search` are not part of this change.
+
 ## `/nl-search` (Claude)
 
 0.2 RPS for 60 s alongside 5 RPS of `/search` (`NL=1 loadtest/ramp.js`). This uses `claude-opus-5-5` at effort `low` with structured output.
