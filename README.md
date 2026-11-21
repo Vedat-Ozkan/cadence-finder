@@ -3,6 +3,8 @@
 [![ci](https://github.com/Vedat-Ozkan/cadence-finder/actions/workflows/ci.yml/badge.svg)](https://github.com/Vedat-Ozkan/cadence-finder/actions/workflows/ci.yml)
 [![images](https://github.com/Vedat-Ozkan/cadence-finder/actions/workflows/images.yml/badge.svg)](https://github.com/Vedat-Ozkan/cadence-finder/actions/workflows/images.yml)
 
+See the [changelog](CHANGELOG.md) for what changed and when.
+
 Search for chord progressions and cadences in the 40 annotated corpora of DCML's Distant Listening Corpus: 1,284 movements by 36 composers, from Monteverdi to Poulenc (CC BY-NC-SA 4.0; see [NOTICE](NOTICE)).
 - Structured queries like `Ger ... @PAC` ("a German sixth leading, within four chords, to a perfect authentic cadence").
 - Similar-passage search over embeddings.
